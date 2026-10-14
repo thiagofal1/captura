@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Captura — Gravador de tela</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#inicio" aria-label="Captura, início">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span>captura<span class="brand-dot">.</span></span>
+      </a>
+      <div class="topbar-right">
+        <span class="local-badge"><span class="lock-icon" aria-hidden="true">◆</span> Privado por padrão</span>
+        <span class="avatar" aria-hidden="true">C</span>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <section class="intro">
+        <div class="eyebrow"><span class="eyebrow-line"></span> ESTÚDIO DE GRAVAÇÃO</div>
+        <h1>Transforme sua tela<br>em <span>uma boa história.</span></h1>
+        <p>Grave sua tela direto do navegador. Sem instalações, sem uploads — seus vídeos ficam com você.</p>
+      </section>
+
+      <section class="workspace" aria-label="Estúdio de gravação">
+        <div class="studio-card">
+          <div class="studio-heading">
+            <div>
+              <span class="section-kicker">SEU ESTÚDIO</span>
+              <h2>Nova gravação</h2>
+            </div>
+            <div class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusText">Pronto para gravar</span></div>
+          </div>
+
+          <div class="preview" id="previewArea">
+            <video id="previewVideo" autoplay muted playsinline aria-label="Pré-visualização da gravação"></video>
+            <div class="preview-empty" id="previewEmpty">
+              <div class="screen-illustration" aria-hidden="true">
+                <div class="screen-top"><i></i><i></i><i></i></div>
+                <div class="screen-content"><span class="screen-play">▶</span><span class="screen-line"></span><span class="screen-line short"></span></div>
+                <span class="screen-stand"></span>
+              </div>
+              <strong>Sua prévia aparece aqui</strong>
+              <span>Escolha uma tela, janela ou guia para começar</span>
+            </div>
+            <div class="preview-live" id="liveIndicator" hidden><span></span> AO VIVO</div>
+            <div class="preview-timer" id="timerDisplay" hidden>00:00:00</div>
+          </div>
+
+          <div class="record-controls">
+            <button class="button button-record" id="startButton" type="button">
+              <span class="record-icon" aria-hidden="true"></span> Começar a gravar
+            </button>
+            <button class="button button-secondary" id="pauseButton" type="button" disabled>
+              <span class="pause-icon" aria-hidden="true">Ⅱ</span> Pausar
+            </button>
+            <button class="button button-stop" id="stopButton" type="button" disabled>
+              <span class="stop-icon" aria-hidden="true"></span> Finalizar
+            </button>
+          </div>
+          <p class="inline-hint" id="recordingHint"><span aria-hidden="true">✦</span> O navegador vai perguntar o que você quer compartilhar.</p>
+
+          <div class="result-panel" id="resultPanel" hidden>
+            <div class="result-icon" aria-hidden="true">✓</div>
+            <div class="result-copy"><strong>Gravação pronta!</strong><span id="resultDetails">Seu vídeo está preparado para download.</span></div>
+            <a class="button button-download" id="downloadLink" href="#" download="gravacao-de-tela.webm">Baixar vídeo <span aria-hidden="true">↓</span></a>
+            <button class="icon-button" id="dismissResult" type="button" aria-label="Fechar aviso">×</button>
+          </div>
+        </div>
+
+        <aside class="settings-card">
+          <div class="settings-heading">
+            <div class="settings-icon" aria-hidden="true">⚙</div>
+            <div><span class="section-kicker">PERSONALIZE</span><h2>Configurações</h2></div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label" for="qualitySelect">Qualidade do vídeo</label>
+            <div class="select-wrap"><select id="qualitySelect"><option value="standard">Padrão · 720p</option><option value="high" selected>Alta · até 1080p</option><option value="maximum">Máxima · original</option></select><span aria-hidden="true">⌄</span></div>
+            <span class="setting-help">A resolução final depende da tela compartilhada.</span>
+          </div>
+
+          <div class="setting-divider"></div>
+          <div class="setting-group audio-group">
+            <div class="setting-label-row"><div><label class="setting-label" for="systemAudio">Áudio do sistema</label><span class="setting-help">Som da tela ou janela</span></div><label class="switch"><input id="systemAudio" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Incluir áudio do sistema</span></label></div>
+          </div>
+          <div class="setting-divider"></div>
+          <div class="setting-group audio-group">
+            <div class="setting-label-row"><div><label class="setting-label" for="microphone">Microfone</label><span class="setting-help">Narrar durante a gravação</span></div><label class="switch"><input id="microphone" type="checkbox"><span class="switch-track"></span><span class="sr-only">Incluir microfone</span></label></div>
+          </div>
+
+          <div class="tip-card"><span class="tip-sparkle" aria-hidden="true">✦</span><div><strong>Dica rápida</strong><p>Ative “Compartilhar áudio” na janela do navegador para capturar o som do sistema.</p></div></div>
+        </aside>
+      </section>
+
+      <footer class="page-footer"><span>Feito para compartilhar ideias.</span><span class="footer-separator">·</span><span>Seus arquivos permanecem no seu dispositivo.</span></footer>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+</body>
+</html>
