@@ -131,10 +131,11 @@ Em seguida, acesse no navegador: `http://localhost:3000`.
 
 ---
 
-## 💡 Próximos Passos & Ideias
+## 💡 Ideias & Roadmap
 
-Quer ver o que estamos planejando para o futuro do Captura?  
-Confira o nosso arquivo [**ideas.md**](ideas.md) com a lista de melhorias prioritárias, recursos visuais (câmera PiP, exportação GIF, anotações na tela) e o roadmap de evolução da ferramenta.
+Quer acompanhar ou contribuir com a evolução do Captura?
+- 🗺️ Consulte o [**roadmap.md**](roadmap.md) para ver o cronograma de versões (v1.1, v1.2, v1.3 e v2.0) e o status das funcionalidades.
+- 💡 Veja o [**ideas.md**](ideas.md) com a análise aprofundada de conceitos, diferenciais visuais (Facecam PiP, exportação para GIF, moldura Screen Studio) e a estratégia de lançamento.
 
 ---
 
