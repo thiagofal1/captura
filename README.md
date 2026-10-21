@@ -24,6 +24,10 @@ Enquanto muitas soluções do mercado exigem contas obrigatórias, enviam seus v
 - 🚀 **Zero Instalações:** Sem extensões pesadas ou executáveis de terceiros. Basta abrir a página e gravar.
 - 🎬 **Interface Estilo OBS Studio:** Visual pro modular (Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles de Gravação), canvas 16:9 e barra de status em tempo real.
 - 🌓 **Modo Escuro e Modo Claro em 1 Clique:** Alternância instantânea no topo (`🌙 Escuro` / `☀️ Claro`) com persistência automática no `localStorage`.
+- 📷 **Câmera Flutuante Arrastável (Facecam PiP):**
+  - Câmera redonda ou retangular sobreposta que você pode **arrastar livremente com o mouse ou toque** para qualquer lugar da tela.
+  - Composição em tempo real no vídeo gravado: a câmera se move no vídeo exatamente para onde você a arrastou.
+  - Opções de espelhamento (flip horizontal), alternância de formato (círculo / retângulo) e Picture-in-Picture nativo.
 - ⏱️ **Contagem Regressiva (3..2..1...):** Overlay com animação antes do início real da gravação, dando tempo para você alternar para a janela desejada (com atalho para pular com `Espaço`).
 - 🎚️ **Mixer de Áudio Profissional & VU Meters:**
   - Barras animadas de decibéis em tempo real (-50 dB a 0 dB) para Áudio do Desktop e Microfone.

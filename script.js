@@ -64,11 +64,23 @@
   const toggleScreenBtn = document.querySelector('#toggleScreenBtn');
   const toggleMicBtn = document.querySelector('#toggleMicBtn');
   const toggleSysAudioBtn = document.querySelector('#toggleSysAudioBtn');
+  const toggleWebcamBtn = document.querySelector('#toggleWebcamBtn');
   const micEyeIcon = document.querySelector('#micEyeIcon');
   const sysEyeIcon = document.querySelector('#sysEyeIcon');
+  const webcamEyeIcon = document.querySelector('#webcamEyeIcon');
   const sourceScreenStatus = document.querySelector('#sourceScreenStatus');
   const sourceMicStatus = document.querySelector('#sourceMicStatus');
   const sourceSysAudioStatus = document.querySelector('#sourceSysAudioStatus');
+  const sourceWebcamStatus = document.querySelector('#sourceWebcamStatus');
+  const canvasWebcamToggleBtn = document.querySelector('#canvasWebcamToggleBtn');
+
+  // Facecam PiP Elements
+  const facecamPip = document.querySelector('#facecamPip');
+  const webcamVideo = document.querySelector('#webcamVideo');
+  const facecamShapeBtn = document.querySelector('#facecamShapeBtn');
+  const facecamMirrorBtn = document.querySelector('#facecamMirrorBtn');
+  const facecamPipPopoutBtn = document.querySelector('#facecamPipPopoutBtn');
+  const facecamCloseBtn = document.querySelector('#facecamCloseBtn');
 
   // Settings
   const qualitySelect = document.querySelector('#qualitySelect');
@@ -132,6 +144,24 @@
 
   let isDesktopAudioEnabled = true;
   let isMicAudioEnabled = true;
+
+  // Webcam & Compositing State
+  let webcamStream = null;
+  let isWebcamActive = false;
+  let isWebcamMirrored = false;
+  let isPipDragging = false;
+  let pipStartX = 0;
+  let pipStartY = 0;
+  let pipInitialLeft = 0;
+  let pipInitialTop = 0;
+  let pipLeftPercent = 75; // 75% width
+  let pipTopPercent = 70;  // 70% height
+  let pipWidthPercent = 16;
+  let isCompositing = false;
+  let compositeCanvas = null;
+  let compositeCtx = null;
+  let compositeStream = null;
+  let compositeAnimId = null;
 
   // --- Toast Notification Helper ---
   function showToast(message, duration = 4500) {
@@ -366,6 +396,9 @@
     streamResolutionLabel.textContent = 'Fonte: Nenhuma selecionada';
     liveTag.hidden = true;
     timerTag.hidden = true;
+    countdownOverlay.hidden = true;
+    isCountingDown = false;
+    stopCanvasCompositing();
 
     if (desktopSourceNode) {
       try { desktopSourceNode.disconnect(); } catch (e) {}
@@ -383,6 +416,14 @@
     window.clearInterval(timerInterval);
     timerInterval = null;
 
+    if (countdownTimerId) {
+      window.clearInterval(countdownTimerId);
+      countdownTimerId = null;
+    }
+    isCountingDown = false;
+    countdownOverlay.hidden = true;
+    stopCanvasCompositing();
+
     recordButton.classList.remove('is-recording');
     recordButton.disabled = false;
     recordButton.innerHTML = '<span class="btn-rec-dot"></span> Iniciar gravação';
@@ -397,6 +438,8 @@
   // --- Countdown Sequence ---
   function startCountdown(seconds, onComplete) {
     if (seconds <= 0) {
+      countdownOverlay.hidden = true;
+      isCountingDown = false;
       onComplete();
       return;
     }
@@ -433,6 +476,13 @@
   function beginActualRecording() {
     if (!recorder) return;
     try {
+      if (countdownTimerId) {
+        window.clearInterval(countdownTimerId);
+        countdownTimerId = null;
+      }
+      isCountingDown = false;
+      countdownOverlay.hidden = true;
+
       recorder.start(1000);
       startedAt = Date.now();
       pausedAt = 0;
@@ -526,8 +576,16 @@
 
       startVuMeterLoop();
 
-      // 3. Assemble Mixed Stream
-      const outputTracks = [...displayStream.getVideoTracks()];
+      // 3. Assemble Mixed Stream (Composite Screen + Webcam if active)
+      let finalVideoTrack = displayStream.getVideoTracks()[0];
+      if (isWebcamActive && webcamStream && webcamVideo) {
+        startCanvasCompositing(videoTrack, selectedFps);
+        if (compositeStream && compositeStream.getVideoTracks().length > 0) {
+          finalVideoTrack = compositeStream.getVideoTracks()[0];
+        }
+      }
+
+      const outputTracks = [finalVideoTrack];
       const mixedAudioTracks = audioDestination.stream.getAudioTracks();
       if (mixedAudioTracks.length > 0) {
         outputTracks.push(mixedAudioTracks[0]);
@@ -579,6 +637,7 @@
     if (isCountingDown) {
       cancelOrSkipCountdown();
     }
+    stopCanvasCompositing();
     if (recorder && recorder.state !== 'inactive') {
       recorder.stop();
     }
@@ -762,6 +821,236 @@
     });
   });
 
+  // --- Canvas Compositing (Screen + Facecam PiP) ---
+  function drawRoundedRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function startCanvasCompositing(videoTrack, fps) {
+    if (!compositeCanvas) {
+      compositeCanvas = document.createElement('canvas');
+    }
+    const settings = videoTrack.getSettings();
+    const w = settings.width || 1920;
+    const h = settings.height || 1080;
+    compositeCanvas.width = w;
+    compositeCanvas.height = h;
+    compositeCtx = compositeCanvas.getContext('2d', { alpha: false });
+    isCompositing = true;
+
+    function renderComposite() {
+      if (!isCompositing) return;
+
+      // 1. Draw screen video
+      compositeCtx.drawImage(previewVideo, 0, 0, w, h);
+
+      // 2. Draw webcam bubble if active
+      if (isWebcamActive && webcamVideo && webcamVideo.readyState >= 2) {
+        const pipW = (pipWidthPercent / 100) * w;
+        const isCircle = !facecamPip.classList.contains('is-rect');
+        const pipH = isCircle ? pipW : (pipW * 0.75);
+        const pipX = (pipLeftPercent / 100) * w;
+        const pipY = (pipTopPercent / 100) * h;
+
+        compositeCtx.save();
+        // Drop Shadow
+        compositeCtx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+        compositeCtx.shadowBlur = Math.round(w * 0.012);
+        compositeCtx.shadowOffsetY = Math.round(w * 0.004);
+
+        if (isCircle) {
+          compositeCtx.beginPath();
+          compositeCtx.arc(pipX + pipW / 2, pipY + pipH / 2, pipW / 2, 0, Math.PI * 2);
+          compositeCtx.closePath();
+          compositeCtx.clip();
+        } else {
+          drawRoundedRect(compositeCtx, pipX, pipY, pipW, pipH, Math.round(pipW * 0.08));
+          compositeCtx.clip();
+        }
+
+        if (isWebcamMirrored) {
+          compositeCtx.translate(pipX * 2 + pipW, 0);
+          compositeCtx.scale(-1, 1);
+        }
+
+        compositeCtx.drawImage(webcamVideo, pipX, pipY, pipW, pipH);
+        compositeCtx.restore();
+
+        // Stroke Border
+        compositeCtx.save();
+        compositeCtx.lineWidth = Math.max(3, Math.round(w * 0.0025));
+        compositeCtx.strokeStyle = '#2f5ce8';
+        if (isCircle) {
+          compositeCtx.beginPath();
+          compositeCtx.arc(pipX + pipW / 2, pipY + pipH / 2, pipW / 2, 0, Math.PI * 2);
+          compositeCtx.stroke();
+        } else {
+          drawRoundedRect(compositeCtx, pipX, pipY, pipW, pipH, Math.round(pipW * 0.08));
+          compositeCtx.stroke();
+        }
+        compositeCtx.restore();
+      }
+
+      compositeAnimId = requestAnimationFrame(renderComposite);
+    }
+
+    renderComposite();
+    compositeStream = compositeCanvas.captureStream(fps);
+  }
+
+  function stopCanvasCompositing() {
+    isCompositing = false;
+    if (compositeAnimId) {
+      cancelAnimationFrame(compositeAnimId);
+      compositeAnimId = null;
+    }
+    if (compositeStream) {
+      compositeStream.getTracks().forEach((t) => t.stop());
+      compositeStream = null;
+    }
+  }
+
+  // --- Webcam / Facecam PiP Handlers ---
+  async function toggleWebcam(forceState) {
+    const shouldEnable = forceState !== undefined ? forceState : !isWebcamActive;
+    if (shouldEnable) {
+      try {
+        if (!webcamStream) {
+          webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: 'user',
+            },
+          });
+        }
+        webcamVideo.srcObject = webcamStream;
+        await webcamVideo.play();
+        facecamPip.hidden = false;
+        isWebcamActive = true;
+
+        toggleWebcamBtn?.classList.remove('muted');
+        canvasWebcamToggleBtn?.classList.add('active');
+        sourceWebcamStatus.textContent = 'Ativa (Arrastável)';
+        sourceWebcamStatus.style.color = '#38d39f';
+        if (webcamEyeIcon) webcamEyeIcon.textContent = '👁';
+
+        // Measure initial position percentage
+        const rect = facecamPip.getBoundingClientRect();
+        const parentRect = previewContainer.getBoundingClientRect();
+        if (parentRect.width > 0) {
+          pipLeftPercent = Math.max(0, Math.min(100, ((rect.left - parentRect.left) / parentRect.width) * 100));
+          pipTopPercent = Math.max(0, Math.min(100, ((rect.top - parentRect.top) / parentRect.height) * 100));
+          pipWidthPercent = Math.max(5, Math.min(50, (facecamPip.offsetWidth / parentRect.width) * 100));
+        }
+
+        showToast('Webcam ativada! Arraste a câmera livremente para qualquer lugar da tela.', 3500);
+      } catch (err) {
+        console.warn('Erro ao acessar webcam:', err);
+        showToast('Não foi possível acessar a webcam. Verifique a permissão de câmera no navegador.');
+        stopWebcam();
+      }
+    } else {
+      stopWebcam();
+      showToast('Webcam desativada.');
+    }
+  }
+
+  function stopWebcam() {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach((t) => t.stop());
+      webcamStream = null;
+    }
+    if (webcamVideo) webcamVideo.srcObject = null;
+    facecamPip.hidden = true;
+    isWebcamActive = false;
+
+    toggleWebcamBtn?.classList.add('muted');
+    canvasWebcamToggleBtn?.classList.remove('active');
+    sourceWebcamStatus.textContent = 'Desativada';
+    sourceWebcamStatus.style.color = '';
+    if (webcamEyeIcon) webcamEyeIcon.textContent = '📷';
+  }
+
+  // Freedom to Drag Webcam PiP
+  function setupFacecamDragging() {
+    function onPointerDown(e) {
+      if (e.target.closest('.facecam-btn')) return;
+
+      isPipDragging = true;
+      facecamPip.classList.add('is-dragging');
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      pipStartX = clientX;
+      pipStartY = clientY;
+
+      const rect = facecamPip.getBoundingClientRect();
+      const parentRect = previewContainer.getBoundingClientRect();
+      pipInitialLeft = rect.left - parentRect.left;
+      pipInitialTop = rect.top - parentRect.top;
+
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (!isPipDragging) return;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = clientX - pipStartX;
+      const deltaY = clientY - pipStartY;
+
+      let newLeft = pipInitialLeft + deltaX;
+      let newTop = pipInitialTop + deltaY;
+
+      const maxLeft = previewContainer.clientWidth - facecamPip.offsetWidth;
+      const maxTop = previewContainer.clientHeight - facecamPip.offsetHeight;
+
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+
+      facecamPip.style.left = `${newLeft}px`;
+      facecamPip.style.top = `${newTop}px`;
+      facecamPip.style.right = 'auto';
+      facecamPip.style.bottom = 'auto';
+
+      if (previewContainer.clientWidth > 0 && previewContainer.clientHeight > 0) {
+        pipLeftPercent = (newLeft / previewContainer.clientWidth) * 100;
+        pipTopPercent = (newTop / previewContainer.clientHeight) * 100;
+        pipWidthPercent = (facecamPip.offsetWidth / previewContainer.clientWidth) * 100;
+      }
+    }
+
+    function onPointerUp() {
+      if (isPipDragging) {
+        isPipDragging = false;
+        facecamPip.classList.remove('is-dragging');
+      }
+    }
+
+    facecamPip.addEventListener('mousedown', onPointerDown);
+    facecamPip.addEventListener('touchstart', onPointerDown, { passive: false });
+
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('touchmove', onPointerMove, { passive: false });
+
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchend', onPointerUp);
+  }
+
   // --- Quality & FPS Badge Update ---
   function updateQualityBadge() {
     const qText = qualitySelect.options[qualitySelect.selectedIndex].text.split('·')[1]?.trim() || '1080p';
@@ -888,14 +1177,70 @@
     themeToggleBtn.addEventListener('click', toggleTheme);
   }
 
+  // Facecam Action Listeners
+  if (facecamShapeBtn) {
+    facecamShapeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isRect = facecamPip.classList.toggle('is-rect');
+      facecamShapeBtn.textContent = isRect ? '■' : '●';
+      showToast(isRect ? 'Formato: Retângulo arredondado' : 'Formato: Círculo');
+    });
+  }
+
+  if (facecamMirrorBtn) {
+    facecamMirrorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isWebcamMirrored = !isWebcamMirrored;
+      facecamPip.classList.toggle('is-mirrored', isWebcamMirrored);
+      showToast(isWebcamMirrored ? 'Câmera espelhada horizontalmente' : 'Espelhamento desativado');
+    });
+  }
+
+  if (facecamPipPopoutBtn) {
+    facecamPipPopoutBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (webcamVideo.requestPictureInPicture) {
+          await webcamVideo.requestPictureInPicture();
+          showToast('Câmera aberta em Picture-in-Picture flutuante!');
+        } else {
+          showToast('Picture-in-Picture não suportado neste navegador.');
+        }
+      } catch (err) {
+        console.warn('Erro ao abrir Picture-in-Picture:', err);
+        showToast('Não foi possível ativar PiP fora da janela.');
+      }
+    });
+  }
+
+  if (facecamCloseBtn) {
+    facecamCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      stopWebcam();
+    });
+  }
+
+  if (toggleWebcamBtn) {
+    toggleWebcamBtn.addEventListener('click', () => toggleWebcam());
+  }
+
+  if (canvasWebcamToggleBtn) {
+    canvasWebcamToggleBtn.addEventListener('click', () => toggleWebcam());
+  }
+
   // Clean up on window unload
   window.addEventListener('beforeunload', () => {
     cleanupStreams();
+    stopWebcam();
+    stopCanvasCompositing();
     if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   });
 
   // Initializations
   initTheme();
+  setupFacecamDragging();
   updateQualityBadge();
 
 })();

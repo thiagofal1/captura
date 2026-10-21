@@ -53,9 +53,10 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 ### 🔵 Versão 1.2 — Recursos "Showstopper" & Lançamento Público
 > **Objetivo:** Implementar recursos de alto apelo visual para lançamento em redes sociais, fóruns de desenvolvedores e comunidades abertas.
 
-- [ ] **Câmera Flutuante do Apresentador (Facecam PiP):**
+- [x] **Câmera Flutuante do Apresentador (Facecam PiP):**
   - Câmera em formato circular com borda personalizável sobreposta ao vídeo.
-  - Opção de espelhamento (flip horizontal) e ajuste de posição (cantos da tela).
+  - Liberdade total de posicionamento via Drag & Drop na tela e composição dinâmica em tempo real no vídeo gravado.
+  - Opções de alternância de formato (Círculo / Retângulo), espelhamento horizontal (flip) e Picture-in-Picture flutuante no SO.
 - [ ] **Exportação para GIF Otimizado:**
   - Botão de download rápido em formato `.gif` de alta fluidez (15–24 fps), pensado para Pull Requests, issues do GitHub e chats (Slack/Discord).
 - [x] **Alternância de Tema (Modo Escuro & Modo Claro em 1 Clique):**
@@ -108,7 +109,7 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | Atalhos de Teclado | **v1.1** | Baixo | Médio | 🟢 Concluído |
 | Interface Dark OBS Studio | **v1.1** | Médio | Muito Alto | 🟢 Concluído |
 | Modo Claro / Escuro (1 Clique) | **v1.1** | Baixo | Alto | 🟢 Concluído |
-| Facecam PiP (Bolinha de Câmera) | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
+| Facecam PiP (Bolinha de Câmera Arrastável) | **v1.2** | Médio | Muito Alto | 🟢 Concluído |
 | Exportador de GIF Otimizado | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
 | Editor Trim (Corte de Bordas) | **v1.3** | Médio | Alto | 🟡 Planejado |
 | Moldura Estilo Screen Studio | **v1.3** | Alto | Muito Alto | 🟡 Planejado |

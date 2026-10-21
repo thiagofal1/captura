@@ -63,6 +63,10 @@ body.obs-theme.light-mode {
   padding: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body.obs-theme {
   background-color: var(--obs-bg);
   color: var(--obs-text-primary);
@@ -451,6 +455,10 @@ body.obs-theme.light-mode .deploy-dot {
   animation: fadeIn 0.2s ease;
 }
 
+.countdown-overlay[hidden] {
+  display: none !important;
+}
+
 .countdown-circle {
   width: 90px;
   height: 90px;
@@ -495,6 +503,164 @@ body.obs-theme.light-mode .deploy-dot {
   0% { transform: scale(1); }
   50% { transform: scale(1.08); }
   100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Facecam PiP (Draggable & Customizable Webcam Bubble)
+   ========================================================================== */
+.facecam-pip {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: clamp(120px, 16vw, 175px);
+  height: clamp(120px, 16vw, 175px);
+  border-radius: 50%;
+  border: 3px solid var(--obs-accent-blue);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.7);
+  background: #000;
+  z-index: 20;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.15s ease, border-radius 0.2s ease;
+}
+
+.facecam-pip[hidden] {
+  display: none !important;
+}
+
+.facecam-pip:hover {
+  box-shadow: 0 12px 32px rgba(47, 92, 232, 0.55);
+}
+
+.facecam-pip.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 16px 40px rgba(47, 92, 232, 0.8);
+  transform: scale(1.04);
+}
+
+.facecam-pip.is-rect {
+  border-radius: 12px;
+  height: clamp(90px, 12vw, 130px);
+}
+
+.facecam-video-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+#webcamVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  display: block;
+}
+
+.facecam-pip.is-mirrored #webcamVideo {
+  transform: scaleX(-1);
+}
+
+/* Hover Toolbar on the Facecam Bubble */
+.facecam-toolbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  background: rgba(14, 16, 24, 0.88);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.facecam-pip:hover .facecam-toolbar {
+  opacity: 1;
+}
+
+.facecam-drag-indicator {
+  font-size: 11px;
+  color: var(--obs-text-muted);
+  cursor: grab;
+  padding: 0 2px;
+}
+
+.facecam-btn {
+  background: #232636;
+  border: 1px solid #3c425c;
+  color: #fff;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.facecam-btn:hover {
+  background: var(--obs-accent-blue);
+  border-color: var(--obs-accent-blue);
+}
+
+.facecam-btn.facecam-close:hover {
+  background: var(--obs-rec-red);
+  border-color: var(--obs-rec-red);
+}
+
+.canvas-action-btn {
+  background: #242738;
+  border: 1px solid #3b415a;
+  color: var(--obs-text-primary);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.canvas-action-btn:hover {
+  background: var(--obs-btn-hover);
+  border-color: var(--obs-border-focus);
+}
+
+.canvas-action-btn.active {
+  background: #1e2d5c;
+  border-color: #3f6ad8;
+  color: #fff;
+}
+
+body.obs-theme.light-mode .canvas-action-btn {
+  background: #e2e6f1;
+  border-color: #cad1e2;
+  color: #192033;
+}
+
+body.obs-theme.light-mode .canvas-action-btn:hover {
+  background: #d4dbe9;
+}
+
+body.obs-theme.light-mode .canvas-action-btn.active {
+  background: #e1ebff;
+  border-color: #3460e0;
+  color: #193db5;
 }
 
 /* Canvas Toolbar */

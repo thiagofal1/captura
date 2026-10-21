@@ -66,6 +66,20 @@
             <button class="countdown-skip-btn" id="skipCountdownBtn" type="button">Pular contagem (Espaço)</button>
           </div>
 
+          <!-- Draggable Facecam PiP (Webcam) -->
+          <div class="facecam-pip" id="facecamPip" hidden>
+            <div class="facecam-video-wrap" id="facecamVideoWrap">
+              <video id="webcamVideo" autoplay muted playsinline></video>
+            </div>
+            <div class="facecam-toolbar">
+              <span class="facecam-drag-indicator" title="Arraste para mover na tela">✥</span>
+              <button class="facecam-btn" id="facecamShapeBtn" title="Alternar formato: Círculo / Retângulo" type="button">●</button>
+              <button class="facecam-btn" id="facecamMirrorBtn" title="Espelhar imagem da câmera" type="button">↔</button>
+              <button class="facecam-btn" id="facecamPipPopoutBtn" title="Flutuar câmera fora do navegador (PiP)" type="button">❐</button>
+              <button class="facecam-btn facecam-close" id="facecamCloseBtn" title="Desativar Câmera" type="button">×</button>
+            </div>
+          </div>
+
           <!-- Canvas Live Indicators -->
           <div class="canvas-overlay-top">
             <div class="canvas-tag live-tag" id="liveTag" hidden>
@@ -85,6 +99,9 @@
             <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
           </div>
           <div class="canvas-toolbar-right">
+            <button class="canvas-action-btn" id="canvasWebcamToggleBtn" type="button" title="Ligar/Desligar Câmera Flutuante">
+              <span class="cam-icon">📷</span> Câmera (PiP)
+            </button>
             <span class="canvas-quality-badge" id="canvasQualityBadge">1080p · 60 FPS</span>
           </div>
         </div>
@@ -161,6 +178,17 @@
                 <div class="source-info">
                   <span class="source-title">Áudio do Desktop</span>
                   <span class="source-sub" id="sourceSysAudioStatus">Ativo</span>
+                </div>
+              </div>
+              <!-- Source: Webcam -->
+              <div class="source-item" id="sourceWebcamItem">
+                <button class="source-toggle-btn muted" id="toggleWebcamBtn" title="Ligar/Desligar Câmera (Webcam)" type="button">
+                  <span class="source-eye-icon" id="webcamEyeIcon">📷</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Câmera (Facecam PiP)</span>
+                  <span class="source-sub" id="sourceWebcamStatus">Desativada</span>
                 </div>
               </div>
             </div>
