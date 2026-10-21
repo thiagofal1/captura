@@ -22,17 +22,20 @@ Enquanto muitas soluções do mercado exigem contas obrigatórias, enviam seus v
 
 - 🔒 **100% Privado e Local:** Nenhum byte de vídeo é enviado para a nuvem. O processamento acontece diretamente na memória do navegador.
 - 🚀 **Zero Instalações:** Sem extensões pesadas ou executáveis de terceiros. Basta abrir a página e gravar.
-- 🎙️ **Áudio Flexível:**
-  - Áudio interno do sistema (som da aba, vídeo ou aplicativo).
-  - Narração em tempo real via microfone.
-  - Mixagem de ambas as faixas.
+- 🎬 **Interface Estilo OBS Studio:** Visual pro escuro (*dark theme*) com docks modulares (Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles de Gravação), canvas 16:9 e barra de status em tempo real.
+- ⏱️ **Contagem Regressiva (3..2..1...):** Overlay com animação antes do início real da gravação, dando tempo para você alternar para a janela desejada (com atalho para pular com `Espaço`).
+- 🎚️ **Mixer de Áudio Profissional & VU Meters:**
+  - Barras animadas de decibéis em tempo real (-50 dB a 0 dB) para Áudio do Desktop e Microfone.
+  - Faders de controle de volume independentes e botões de mute instantâneo.
+  - Mixagem robusta via **Web Audio API** somando as faixas em uma única saída limpa.
+- 🎞️ **Metadados WebM Corrigidos (Scrubber / Linha do Tempo):** Injeção de duração EBML no arquivo final para que a barra de progresso funcione em qualquer reprodutor (Windows Media Player, VLC, QuickTime).
+- ⌨️ **Atalhos de Teclado Globais:** Opere o estúdio sem tirar as mãos do teclado (`Espaço` ou `Alt + R` para gravar/parar, `Alt + P` para pausar/retomar, `Esc` para pular/fechar).
 - 🎚️ **Controle de Resolução e Bitrate:**
   - **Padrão (720p):** Ideal para envios rápidos e menor consumo de espaço (~2.5 Mbps).
   - **Alta (até 1080p):** Equilíbrio perfeito entre qualidade e tamanho (~5.0 Mbps).
-  - **Máxima (Original):** Fidelidade total à resolução da sua tela (~8.0 Mbps).
+  - **Máxima (Original):** Fidelidade total à resolução da sua tela (~8.5 Mbps).
 - ⏸️ **Pausa e Retomada:** Controle total da sua gravação a qualquer momento, com compensação automática de tempo no cronômetro.
-- 💾 **Exportação Imediata:** Download instantâneo com estimativa do tamanho final gerado (WebM/MP4 dependendo do navegador).
-- 🎨 **Interface Studio Premium:** Design refinado, feedback em tempo real e visual limpo projetado para evitar distrações.
+- 💾 **Exportação Imediata:** Download instantâneo com estimativa do tamanho final gerado e modal com player de reprodução integrado.
 
 ---
 

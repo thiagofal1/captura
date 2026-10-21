@@ -29,21 +29,24 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 
 ---
 
-### 🟡 Versão 1.1 — Confiabilidade & Experiência de Gravação *(Prioridade Atual)*
-> **Objetivo:** Eliminar atritos comuns de gravação no navegador e garantir arquivos de vídeo 100% compatíveis com qualquer reprodutor.
+### 🟢 Versão 1.1 — Confiabilidade, Áudio Real & Interface OBS Studio *(Concluído)*
+> **Objetivo:** Eliminar atritos comuns de gravação no navegador, adotar a interface profissional escura estilo OBS Studio e garantir arquivos de vídeo 100% compatíveis com qualquer reprodutor.
 
-- [ ] **Contagem Regressiva (3..2..1...):**
-  - Overlay animado antes do início real da gravação, dando tempo para o usuário posicionar a janela correta.
-- [ ] **Medidor de Volume do Microfone (VU Meter):**
-  - Barra animada em tempo real ao lado do toggle de microfone (`AudioContext` + `AnalyserNode`) para evitar gravações no mudo.
-- [ ] **Mixagem de Áudio Nativa via Web Audio API:**
-  - Fusão real dos streams de áudio do sistema e do microfone em uma única faixa mixada para evitar perda de canais em navegadores específicos.
-- [ ] **Correção de Metadados WebM (Scrubber & Duração):**
-  - Injeção da duração no cabeçalho EBML do WebM para garantir que a barra de progresso funcione no Windows Media Player, VLC e QuickTime.
-- [ ] **Atalhos de Teclado Globais:**
-  - `Espaço` ou `Alt + R` (Iniciar/Parar gravação), `Alt + P` (Pausar/Retomar), `Esc` (Cancelar).
-- [ ] **Seleção Explícita de Dispositivo de Áudio:**
-  - Dropdown com lista dos microfones disponíveis caso o usuário utilize mais de uma entrada (headset, mic USB, etc.).
+- [x] **Interface Profissional OBS Studio:**
+  - Layout escuro com docks modulares (Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles).
+  - Canvas 16:9 centralizado com modo de ajuste e barra de status inferior (REC, FPS, Tamanho, Privacidade).
+- [x] **Contagem Regressiva (3..2..1...):**
+  - Overlay animado antes do início real da gravação, dando tempo para o usuário posicionar a janela correta, com opção de pular via Espaço.
+- [x] **Medidor de Volume em Tempo Real (VU Meter OBS):**
+  - Barras animadas estilo OBS com zonas verde (-50dB a -20dB), amarelo (-20dB a -10dB) e vermelho (-10dB a 0dB) para Desktop e Microfone.
+- [x] **Mixagem de Áudio Nativa via Web Audio API:**
+  - Fusão dos streams de áudio do sistema e do microfone em uma única faixa mixada via `AudioContext` + `createMediaStreamDestination`, com faders de volume e botões de mute independentes.
+- [x] **Correção de Metadados WebM (Scrubber & Duração):**
+  - Injeção da duração no cabeçalho EBML do WebM (`fix-webm-duration`) garantindo que a barra de progresso funcione perfeitamente no Windows Media Player, VLC e QuickTime.
+- [x] **Atalhos de Teclado Globais:**
+  - `Espaço` ou `Alt + R` (Iniciar/Parar gravação), `Alt + P` (Pausar/Retomar), `Esc` (Cancelar/Fechar), `M` (Mudo Microfone).
+- [x] **Deploy Público Oficial (Vercel):**
+  - Publicação da aplicação online com carregamento estático e processamento 100% local.
 
 ---
 
@@ -98,14 +101,14 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | :--- | :---: | :---: | :---: | :---: |
 | Captura de Tela + Áudio Básico | **v1.0** | Baixo | Crítico | 🟢 Concluído |
 | Seletor de Qualidade / Bitrate | **v1.0** | Baixo | Alto | 🟢 Concluído |
-| Contagem Regressiva (3..2..1) | **v1.1** | Baixo | Alto | 🟡 Planejado |
-| VU Meter (Nível do Microfone) | **v1.1** | Médio | Alto | 🟡 Planejado |
-| Mixagem via Web Audio API | **v1.1** | Médio | Crítico | 🟡 Planejado |
-| Correção de Duração WebM | **v1.1** | Baixo | Alto | 🟡 Planejado |
-| Atalhos de Teclado | **v1.1** | Baixo | Médio | 🟡 Planejado |
+| Contagem Regressiva (3..2..1) | **v1.1** | Baixo | Alto | 🟢 Concluído |
+| VU Meter (Nível do Microfone & Desktop) | **v1.1** | Médio | Alto | 🟢 Concluído |
+| Mixagem via Web Audio API | **v1.1** | Médio | Crítico | 🟢 Concluído |
+| Correção de Duração WebM | **v1.1** | Baixo | Alto | 🟢 Concluído |
+| Atalhos de Teclado | **v1.1** | Baixo | Médio | 🟢 Concluído |
+| Interface Dark OBS Studio | **v1.1** | Médio | Muito Alto | 🟢 Concluído |
 | Facecam PiP (Bolinha de Câmera) | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
 | Exportador de GIF Otimizado | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
-| Tema Escuro (Dark Mode) | **v1.2** | Baixo | Médio | 🟡 Planejado |
 | Editor Trim (Corte de Bordas) | **v1.3** | Médio | Alto | 🟡 Planejado |
 | Moldura Estilo Screen Studio | **v1.3** | Alto | Muito Alto | 🟡 Planejado |
 | PWA Offline | **v1.3** | Baixo | Médio | 🟡 Planejado |

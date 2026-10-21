@@ -3,106 +3,405 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f7fb">
-  <title>Captura — Gravador de tela</title>
+  <meta name="theme-color" content="#161720">
+  <title>Captura Studio — Gravador de Tela Web</title>
   <link rel="stylesheet" href="style.css">
+  <script src="fix-webm-duration.js"></script>
   <script src="script.js" defer></script>
 </head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#inicio" aria-label="Captura, início">
-        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-        <span>captura<span class="brand-dot">.</span></span>
-      </a>
-      <div class="topbar-right">
-        <span class="local-badge"><span class="lock-icon" aria-hidden="true">◆</span> Privado por padrão</span>
-        <span class="avatar" aria-hidden="true">C</span>
+<body class="obs-theme">
+  <div class="app-window">
+    
+    <!-- OBS Top Menu Bar -->
+    <header class="obs-menu-bar">
+      <div class="menu-items">
+        <span class="obs-brand">
+          <span class="obs-logo-dot"></span>
+          <strong>Captura</strong> Studio
+        </span>
+        <button class="menu-btn" id="menuFileBtn" type="button">Arquivo</button>
+        <button class="menu-btn" id="menuShortcutsBtn" type="button">Atalhos</button>
+        <button class="menu-btn" id="menuAudioBtn" type="button">Testar Áudio</button>
+        <button class="menu-btn" id="menuHelpBtn" type="button">Ajuda</button>
+      </div>
+      <div class="menu-meta">
+        <span class="meta-tag meta-private">
+          <span class="lock-icon" aria-hidden="true">🔒</span> 100% Local & Privado
+        </span>
+        <span class="meta-tag meta-deploy">
+          <span class="deploy-dot"></span> Vercel Deploy
+        </span>
       </div>
     </header>
 
-    <main id="inicio">
-      <section class="intro">
-        <div class="eyebrow"><span class="eyebrow-line"></span> ESTÚDIO DE GRAVAÇÃO</div>
-        <h1>Transforme sua tela<br>em <span>uma boa história.</span></h1>
-        <p>Grave sua tela direto do navegador. Sem instalações, sem uploads — seus vídeos ficam com você.</p>
-      </section>
-
-      <section class="workspace" aria-label="Estúdio de gravação">
-        <div class="studio-card">
-          <div class="studio-heading">
-            <div>
-              <span class="section-kicker">SEU ESTÚDIO</span>
-              <h2>Nova gravação</h2>
+    <!-- OBS Main Viewport (Canvas Preview) -->
+    <main class="obs-main">
+      <div class="canvas-viewport" id="canvasViewport">
+        <div class="preview-canvas-container" id="previewArea">
+          <video id="previewVideo" autoplay muted playsinline aria-label="Pré-visualização da gravação"></video>
+          
+          <!-- Idle / Empty Canvas Placeholder -->
+          <div class="canvas-empty" id="canvasEmpty">
+            <div class="obs-canvas-target" aria-hidden="true">
+              <div class="target-cross"></div>
+              <div class="target-center">▶</div>
             </div>
-            <div class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusText">Pronto para gravar</span></div>
-          </div>
-
-          <div class="preview" id="previewArea">
-            <video id="previewVideo" autoplay muted playsinline aria-label="Pré-visualização da gravação"></video>
-            <div class="preview-empty" id="previewEmpty">
-              <div class="screen-illustration" aria-hidden="true">
-                <div class="screen-top"><i></i><i></i><i></i></div>
-                <div class="screen-content"><span class="screen-play">▶</span><span class="screen-line"></span><span class="screen-line short"></span></div>
-                <span class="screen-stand"></span>
-              </div>
-              <strong>Sua prévia aparece aqui</strong>
-              <span>Escolha uma tela, janela ou guia para começar</span>
+            <div class="canvas-empty-text">
+              <strong>Pré-visualização do Programa</strong>
+              <span>Clique em <b>Iniciar Gravação</b> ou pressione <kbd>Espaço</kbd> para selecionar a tela</span>
             </div>
-            <div class="preview-live" id="liveIndicator" hidden><span></span> AO VIVO</div>
-            <div class="preview-timer" id="timerDisplay" hidden>00:00:00</div>
+            <div class="canvas-guide-badge">TELA CHEIA · JANELA · GUIA DO NAVEGADOR</div>
           </div>
 
-          <div class="record-controls">
-            <button class="button button-record" id="startButton" type="button">
-              <span class="record-icon" aria-hidden="true"></span> Começar a gravar
-            </button>
-            <button class="button button-secondary" id="pauseButton" type="button" disabled>
-              <span class="pause-icon" aria-hidden="true">Ⅱ</span> Pausar
-            </button>
-            <button class="button button-stop" id="stopButton" type="button" disabled>
-              <span class="stop-icon" aria-hidden="true"></span> Finalizar
-            </button>
+          <!-- Countdown Overlay (3, 2, 1...) -->
+          <div class="countdown-overlay" id="countdownOverlay" hidden>
+            <div class="countdown-circle">
+              <span class="countdown-number" id="countdownNumber">3</span>
+            </div>
+            <p class="countdown-label">Prepare sua janela...</p>
+            <button class="countdown-skip-btn" id="skipCountdownBtn" type="button">Pular contagem (Espaço)</button>
           </div>
-          <p class="inline-hint" id="recordingHint"><span aria-hidden="true">✦</span> O navegador vai perguntar o que você quer compartilhar.</p>
 
-          <div class="result-panel" id="resultPanel" hidden>
-            <div class="result-icon" aria-hidden="true">✓</div>
-            <div class="result-copy"><strong>Gravação pronta!</strong><span id="resultDetails">Seu vídeo está preparado para download.</span></div>
-            <a class="button button-download" id="downloadLink" href="#" download="gravacao-de-tela.webm">Baixar vídeo <span aria-hidden="true">↓</span></a>
-            <button class="icon-button" id="dismissResult" type="button" aria-label="Fechar aviso">×</button>
+          <!-- Canvas Live Indicators -->
+          <div class="canvas-overlay-top">
+            <div class="canvas-tag live-tag" id="liveTag" hidden>
+              <span class="live-dot"></span> GRAVANDO AO VIVO
+            </div>
+            <div class="canvas-tag timer-tag" id="timerTag" hidden>
+              00:00:00
+            </div>
           </div>
         </div>
 
-        <aside class="settings-card">
-          <div class="settings-heading">
-            <div class="settings-icon" aria-hidden="true">⚙</div>
-            <div><span class="section-kicker">PERSONALIZE</span><h2>Configurações</h2></div>
+        <!-- Canvas Toolbar (like OBS: "Dimensionar à janela", info) -->
+        <div class="canvas-toolbar">
+          <div class="canvas-toolbar-left">
+            <span class="canvas-tool-label">Modo: <b>Ajustar à janela</b></span>
+            <span class="tool-sep">|</span>
+            <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
           </div>
+          <div class="canvas-toolbar-right">
+            <span class="canvas-quality-badge" id="canvasQualityBadge">1080p · 60 FPS</span>
+          </div>
+        </div>
+      </div>
 
-          <div class="setting-group">
-            <label class="setting-label" for="qualitySelect">Qualidade do vídeo</label>
-            <div class="select-wrap"><select id="qualitySelect"><option value="standard">Padrão · 720p</option><option value="high" selected>Alta · até 1080p</option><option value="maximum">Máxima · original</option></select><span aria-hidden="true">⌄</span></div>
-            <span class="setting-help">A resolução final depende da tela compartilhada.</span>
+      <!-- OBS Bottom Docks Area -->
+      <section class="obs-docks" aria-label="Painéis do Estúdio">
+        
+        <!-- Dock 1: Cenas / Modos -->
+        <div class="dock-panel dock-scenes">
+          <div class="dock-header">
+            <span class="dock-title">Cenas</span>
+            <div class="dock-tools"><span class="dock-icon">▢</span></div>
           </div>
+          <div class="dock-content">
+            <ul class="scene-list" id="sceneList">
+              <li class="scene-item active" data-scene="standard">
+                <span class="scene-marker"></span>
+                <span class="scene-name">Tela & Áudio Total</span>
+              </li>
+              <li class="scene-item" data-scene="screen-only">
+                <span class="scene-marker"></span>
+                <span class="scene-name">Apenas Tela (Mudo)</span>
+              </li>
+              <li class="scene-item" data-scene="narration">
+                <span class="scene-marker"></span>
+                <span class="scene-name">Tutorial (Tela + Mic)</span>
+              </li>
+            </ul>
+          </div>
+          <div class="dock-bottom-bar">
+            <button class="dock-mini-btn" title="Cena Padrão" type="button">+</button>
+            <button class="dock-mini-btn" title="Redefinir" type="button">↺</button>
+            <span class="dock-mini-info">3 predefinições</span>
+          </div>
+        </div>
 
-          <div class="setting-divider"></div>
-          <div class="setting-group audio-group">
-            <div class="setting-label-row"><div><label class="setting-label" for="systemAudio">Áudio do sistema</label><span class="setting-help">Som da tela ou janela</span></div><label class="switch"><input id="systemAudio" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Incluir áudio do sistema</span></label></div>
+        <!-- Dock 2: Fontes (Sources) -->
+        <div class="dock-panel dock-sources">
+          <div class="dock-header">
+            <span class="dock-title">Fontes</span>
+            <div class="dock-tools"><span class="dock-icon">▢</span></div>
           </div>
-          <div class="setting-divider"></div>
-          <div class="setting-group audio-group">
-            <div class="setting-label-row"><div><label class="setting-label" for="microphone">Microfone</label><span class="setting-help">Narrar durante a gravação</span></div><label class="switch"><input id="microphone" type="checkbox"><span class="switch-track"></span><span class="sr-only">Incluir microfone</span></label></div>
+          <div class="dock-content">
+            <div class="source-list">
+              <!-- Source: Screen -->
+              <div class="source-item" id="sourceScreenItem">
+                <button class="source-toggle-btn active" id="toggleScreenBtn" title="Ativar/Desativar Captura de Tela" type="button">
+                  <span class="source-eye-icon">👁</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Captura de Monitor</span>
+                  <span class="source-sub" id="sourceScreenStatus">Pronto</span>
+                </div>
+              </div>
+              <!-- Source: Mic -->
+              <div class="source-item" id="sourceMicItem">
+                <button class="source-toggle-btn active" id="toggleMicBtn" title="Ligar/Desligar Microfone" type="button">
+                  <span class="source-eye-icon" id="micEyeIcon">👁</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Microfone / Aux</span>
+                  <span class="source-sub" id="sourceMicStatus">Ativo</span>
+                </div>
+              </div>
+              <!-- Source: Desktop Audio -->
+              <div class="source-item" id="sourceSysAudioItem">
+                <button class="source-toggle-btn active" id="toggleSysAudioBtn" title="Ligar/Desligar Áudio Desktop" type="button">
+                  <span class="source-eye-icon" id="sysEyeIcon">👁</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Áudio do Desktop</span>
+                  <span class="source-sub" id="sourceSysAudioStatus">Ativo</span>
+                </div>
+              </div>
+            </div>
           </div>
+          <div class="dock-bottom-bar">
+            <button class="dock-mini-btn" title="Configurações de Fontes" type="button">⚙</button>
+            <span class="dock-mini-info">Fontes nativas</span>
+          </div>
+        </div>
 
-          <div class="tip-card"><span class="tip-sparkle" aria-hidden="true">✦</span><div><strong>Dica rápida</strong><p>Ative “Compartilhar áudio” na janela do navegador para capturar o som do sistema.</p></div></div>
-        </aside>
+        <!-- Dock 3: Mixer de Áudio (Audio Mixer with VU Meters) -->
+        <div class="dock-panel dock-mixer">
+          <div class="dock-header">
+            <span class="dock-title">Mixer de áudio</span>
+            <div class="dock-tools"><span class="dock-icon">▢</span></div>
+          </div>
+          <div class="dock-content dock-content-mixer">
+            
+            <!-- Desktop Audio Channel -->
+            <div class="mixer-channel" id="desktopMixerChannel">
+              <div class="channel-header">
+                <span class="channel-title">Áudio do desktop</span>
+                <span class="channel-db" id="desktopDbLabel">-inf dB</span>
+              </div>
+              <div class="channel-body">
+                <button class="mixer-mute-btn" id="desktopMuteBtn" title="Silenciar Áudio Desktop" type="button">
+                  <span class="mute-icon" id="desktopMuteIcon">🔊</span>
+                </button>
+                <div class="vu-wrapper">
+                  <div class="vu-meter">
+                    <div class="vu-fill" id="desktopVuFill" style="width: 0%;"></div>
+                  </div>
+                  <div class="vu-scale">
+                    <span>-50</span>
+                    <span>-40</span>
+                    <span>-30</span>
+                    <span>-20</span>
+                    <span>-10</span>
+                    <span>-5</span>
+                    <span>0</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-fader-row">
+                <input class="obs-fader" id="desktopFader" type="range" min="0" max="1" step="0.01" value="1" title="Volume do Desktop">
+              </div>
+            </div>
+
+            <!-- Mic Audio Channel -->
+            <div class="mixer-channel" id="micMixerChannel">
+              <div class="channel-header">
+                <span class="channel-title">Mic / Narração</span>
+                <span class="channel-db" id="micDbLabel">-inf dB</span>
+              </div>
+              <div class="channel-body">
+                <button class="mixer-mute-btn" id="micMuteBtn" title="Silenciar Microfone" type="button">
+                  <span class="mute-icon" id="micMuteIcon">🎙️</span>
+                </button>
+                <div class="vu-wrapper">
+                  <div class="vu-meter">
+                    <div class="vu-fill" id="micVuFill" style="width: 0%;"></div>
+                  </div>
+                  <div class="vu-scale">
+                    <span>-50</span>
+                    <span>-40</span>
+                    <span>-30</span>
+                    <span>-20</span>
+                    <span>-10</span>
+                    <span>-5</span>
+                    <span>0</span>
+                  </div>
+                </div>
+              </div>
+              <div class="channel-fader-row">
+                <input class="obs-fader" id="micFader" type="range" min="0" max="1.5" step="0.01" value="1" title="Volume do Microfone">
+              </div>
+            </div>
+
+          </div>
+          <div class="dock-bottom-bar">
+            <button class="dock-mini-btn" id="testMicBtn" title="Testar Microfone agora" type="button">🎙️ Testar Mic</button>
+            <span class="dock-mini-info">Web Audio API</span>
+          </div>
+        </div>
+
+        <!-- Dock 4: Configurações Rápidas -->
+        <div class="dock-panel dock-settings">
+          <div class="dock-header">
+            <span class="dock-title">Configurações</span>
+            <div class="dock-tools"><span class="dock-icon">▢</span></div>
+          </div>
+          <div class="dock-content dock-content-compact">
+            
+            <div class="obs-form-group">
+              <label class="obs-label" for="qualitySelect">Qualidade do Vídeo</label>
+              <select class="obs-select" id="qualitySelect">
+                <option value="standard">Padrão · 720p (2.5 Mbps)</option>
+                <option value="high" selected>Alta · 1080p (5.0 Mbps)</option>
+                <option value="maximum">Máxima · Original (8.0 Mbps)</option>
+              </select>
+            </div>
+
+            <div class="obs-form-group">
+              <label class="obs-label" for="fpsSelect">Taxa de Quadros (FPS)</label>
+              <select class="obs-select" id="fpsSelect">
+                <option value="60" selected>60 FPS (Ultra fluido)</option>
+                <option value="30">30 FPS (Padrão)</option>
+              </select>
+            </div>
+
+            <div class="obs-form-group">
+              <label class="obs-label" for="countdownSelect">Contagem Regressiva</label>
+              <select class="obs-select" id="countdownSelect">
+                <option value="3" selected>3 segundos (Recomendado)</option>
+                <option value="5">5 segundos</option>
+                <option value="0">Desativada (Instantâneo)</option>
+              </select>
+            </div>
+
+          </div>
+          <div class="dock-bottom-bar">
+            <span class="dock-mini-info">Metadados WebM ativos</span>
+          </div>
+        </div>
+
+        <!-- Dock 5: Controles (OBS Action Controls) -->
+        <div class="dock-panel dock-controls">
+          <div class="dock-header">
+            <span class="dock-title">Controles</span>
+            <div class="dock-tools"><span class="dock-icon">▢</span></div>
+          </div>
+          <div class="dock-content dock-content-controls">
+            <!-- Record Button -->
+            <button class="obs-btn obs-btn-record" id="recordButton" type="button">
+              <span class="btn-rec-dot"></span> Iniciar gravação
+            </button>
+            
+            <!-- Pause Button -->
+            <button class="obs-btn obs-btn-secondary" id="pauseButton" type="button" disabled>
+              <span class="pause-icon" aria-hidden="true">Ⅱ</span> Pausar gravação
+            </button>
+
+            <!-- Download Button -->
+            <button class="obs-btn obs-btn-download" id="downloadButton" type="button" disabled>
+              <span class="download-icon" aria-hidden="true">↓</span> Baixar último vídeo
+            </button>
+
+            <!-- Help / Reset -->
+            <button class="obs-btn obs-btn-secondary" id="shortcutsBtn" type="button">
+              Atalhos de Teclado
+            </button>
+          </div>
+          <div class="dock-bottom-bar">
+            <span class="dock-mini-info" id="shortcutHint">Espaço: Gravar</span>
+          </div>
+        </div>
+
       </section>
-
-      <footer class="page-footer"><span>Feito para compartilhar ideias.</span><span class="footer-separator">·</span><span>Seus arquivos permanecem no seu dispositivo.</span></footer>
     </main>
 
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <!-- OBS Bottom Status Bar -->
+    <footer class="obs-status-bar">
+      <div class="status-left">
+        <span class="status-indicator-dot ready" id="globalStatusDot"></span>
+        <span class="status-label" id="globalStatusText">Pronto para gravar</span>
+      </div>
+      <div class="status-center">
+        <span class="status-pill-badge">Zero Instalações · Zero Cloud</span>
+      </div>
+      <div class="status-right">
+        <span class="status-metric rec-metric" id="recStatusMetric">
+          <span class="rec-dot-mini"></span> REC: <strong id="statusTimerDisplay">00:00:00</strong>
+        </span>
+        <span class="metric-sep">|</span>
+        <span class="status-metric" id="statusFpsMetric">FPS: <strong>60.00</strong></span>
+        <span class="metric-sep">|</span>
+        <span class="status-metric" id="statusSizeMetric">Tamanho: <strong id="statusSizeDisplay">0.0 MB</strong></span>
+      </div>
+    </footer>
+
+    <!-- Result / Download Modal (OBS Dialog Style) -->
+    <div class="obs-modal-backdrop" id="resultModal" hidden>
+      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="obs-modal-header">
+          <span class="obs-modal-title" id="modalTitle">✓ Gravação Concluída</span>
+          <button class="obs-modal-close" id="closeResultModal" type="button" aria-label="Fechar">×</button>
+        </div>
+        <div class="obs-modal-body">
+          <div class="video-preview-wrapper">
+            <video id="resultVideoPlayer" controls playsinline></video>
+          </div>
+          <div class="result-meta-grid">
+            <div class="meta-card">
+              <span class="meta-label">Duração</span>
+              <strong class="meta-val" id="resultDurationVal">00:00:00</strong>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Tamanho do Arquivo</span>
+              <strong class="meta-val" id="resultSizeVal">0 MB</strong>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Formato</span>
+              <strong class="meta-val" id="resultFormatVal">WEBM (Seekable)</strong>
+            </div>
+            <div class="meta-card">
+              <span class="meta-label">Armazenamento</span>
+              <strong class="meta-val" style="color: #4ade80;">100% Local</strong>
+            </div>
+          </div>
+        </div>
+        <div class="obs-modal-footer">
+          <a class="obs-btn obs-btn-record" id="modalDownloadBtn" href="#" download="gravacao-captura.webm">
+            ⬇ Baixar Vídeo Agora
+          </a>
+          <button class="obs-btn obs-btn-secondary" id="modalNewRecordBtn" type="button">
+            Nova Gravação
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shortcuts Dialog -->
+    <div class="obs-modal-backdrop" id="shortcutsModal" hidden>
+      <div class="obs-modal-card modal-compact" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+        <div class="obs-modal-header">
+          <span class="obs-modal-title" id="shortcutsTitle">⌨️ Atalhos de Teclado</span>
+          <button class="obs-modal-close" id="closeShortcutsModal" type="button" aria-label="Fechar">×</button>
+        </div>
+        <div class="obs-modal-body">
+          <div class="shortcuts-grid">
+            <div class="shortcut-row"><kbd>Espaço</kbd> ou <kbd>Alt + R</kbd> <span>Iniciar / Parar Gravação</span></div>
+            <div class="shortcut-row"><kbd>Alt + P</kbd> <span>Pausar / Retomar Gravação</span></div>
+            <div class="shortcut-row"><kbd>Esc</kbd> <span>Pular contagem / Fechar janelas</span></div>
+            <div class="shortcut-row"><kbd>M</kbd> <span>Silenciar / Ativar Microfone</span></div>
+          </div>
+        </div>
+        <div class="obs-modal-footer">
+          <button class="obs-btn obs-btn-secondary" id="dismissShortcutsBtn" type="button">Entendi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="obs-toast" id="toast" role="status" aria-live="polite"></div>
+
   </div>
 </body>
 </html>
