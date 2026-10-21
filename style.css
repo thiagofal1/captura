@@ -30,6 +30,33 @@
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* Light Theme Variables */
+body.obs-theme.light-mode {
+  color-scheme: light;
+  --obs-bg: #eef1f6;
+  --obs-card: #ffffff;
+  --obs-header: #f2f4f9;
+  --obs-canvas-bg: #0f1017;
+  --obs-border: #d0d5e2;
+  --obs-border-focus: #2f5ce8;
+  --obs-text-primary: #192033;
+  --obs-text-secondary: #4a546c;
+  --obs-text-muted: #79839c;
+
+  --obs-accent-blue: #2554db;
+  --obs-accent-blue-hover: #1e45b8;
+  --obs-rec-red: #d32f2f;
+  --obs-rec-red-hover: #e53935;
+  --obs-rec-glow: rgba(229, 57, 53, 0.35);
+  --obs-live-green: #27ae60;
+  --obs-warn-yellow: #f39c12;
+
+  --obs-btn-bg: #e5e8f2;
+  --obs-btn-border: #cad0df;
+  --obs-btn-hover: #d7dceb;
+  --obs-btn-active: #c5cbdc;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -75,7 +102,7 @@ button:focus-visible, select:focus-visible {
    ========================================================================== */
 .obs-menu-bar {
   height: 38px;
-  background-color: #1a1b24;
+  background-color: var(--obs-header);
   border-bottom: 1px solid var(--obs-border);
   display: flex;
   align-items: center;
@@ -99,8 +126,12 @@ button:focus-visible, select:focus-visible {
   margin-right: 12px;
 }
 
+body.obs-theme.light-mode .obs-brand {
+  color: #4a546c;
+}
+
 .obs-brand strong {
-  color: #fff;
+  color: var(--obs-text-primary);
   font-weight: 700;
   letter-spacing: -0.3px;
 }
@@ -136,6 +167,43 @@ button:focus-visible, select:focus-visible {
   gap: 10px;
 }
 
+/* 1-Click Theme Toggle Button */
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #242738;
+  border: 1px solid #3c425c;
+  color: var(--obs-text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--obs-btn-hover);
+  border-color: var(--obs-border-focus);
+}
+
+.theme-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+body.obs-theme.light-mode .theme-toggle-btn {
+  background-color: #e5e9f3;
+  border-color: #cad1e2;
+  color: #192033;
+}
+
+body.obs-theme.light-mode .theme-toggle-btn:hover {
+  background-color: #d8deec;
+  border-color: #2f5ce8;
+}
+
 .meta-tag {
   font-size: 11px;
   font-weight: 500;
@@ -148,8 +216,17 @@ button:focus-visible, select:focus-visible {
   gap: 5px;
 }
 
+body.obs-theme.light-mode .meta-tag {
+  background: #e7ebf4;
+  border-color: #ccd3e4;
+}
+
 .meta-private {
   color: #38d39f;
+}
+
+body.obs-theme.light-mode .meta-private {
+  color: #0d8b58;
 }
 
 .meta-deploy {
@@ -163,6 +240,10 @@ button:focus-visible, select:focus-visible {
   background: #38d39f;
 }
 
+body.obs-theme.light-mode .deploy-dot {
+  background: #0d8b58;
+}
+
 /* ==========================================================================
    OBS Main Viewport (Canvas)
    ========================================================================== */
@@ -172,7 +253,7 @@ button:focus-visible, select:focus-visible {
   flex-direction: column;
   padding: 10px 12px;
   gap: 10px;
-  background-color: #14151e;
+  background-color: var(--obs-bg);
 }
 
 .canvas-viewport {
@@ -419,7 +500,7 @@ button:focus-visible, select:focus-visible {
 /* Canvas Toolbar */
 .canvas-toolbar {
   height: 28px;
-  background: #181922;
+  background: var(--obs-header);
   border-top: 1px solid var(--obs-border);
   display: flex;
   align-items: center;
@@ -520,8 +601,8 @@ button:focus-visible, select:focus-visible {
 
 .dock-bottom-bar {
   height: 25px;
-  background-color: #191a24;
-  border-top: 1px solid #242634;
+  background-color: var(--obs-header);
+  border-top: 1px solid var(--obs-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -936,7 +1017,7 @@ button:focus-visible, select:focus-visible {
    ========================================================================== */
 .obs-status-bar {
   height: 27px;
-  background-color: #12131b;
+  background-color: var(--obs-header);
   border-top: 1px solid var(--obs-border);
   display: flex;
   align-items: center;
@@ -1195,4 +1276,144 @@ button:focus-visible, select:focus-visible {
 .obs-toast.is-visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ==========================================================================
+   Light Mode Overrides (OBS Light Studio)
+   ========================================================================== */
+body.obs-theme.light-mode .dock-title {
+  color: #2b3248;
+}
+
+body.obs-theme.light-mode .scene-item {
+  background: #f4f6fb;
+  border-color: #d4dae8;
+  color: var(--obs-text-secondary);
+}
+
+body.obs-theme.light-mode .scene-item:hover {
+  background: #e8edf7;
+  color: var(--obs-text-primary);
+}
+
+body.obs-theme.light-mode .scene-item.active {
+  background: #e3ebfc;
+  border-color: #3b6bd6;
+  color: #1a3cb5;
+}
+
+body.obs-theme.light-mode .source-item {
+  background: #f4f6fb;
+  border-color: #d4dae8;
+}
+
+body.obs-theme.light-mode .mixer-channel {
+  background: #f4f6fb;
+  border-color: #d4dae8;
+}
+
+body.obs-theme.light-mode .channel-title {
+  color: #192033;
+}
+
+body.obs-theme.light-mode .channel-db {
+  color: #6d768f;
+}
+
+body.obs-theme.light-mode .mixer-mute-btn {
+  background: #e5e9f3;
+  border-color: #cad1e2;
+  color: #192033;
+}
+
+body.obs-theme.light-mode .mixer-mute-btn:hover {
+  background: #d8deec;
+}
+
+body.obs-theme.light-mode .mixer-mute-btn.is-muted {
+  background: #fce8e8;
+  border-color: #e57373;
+  color: #d32f2f;
+}
+
+body.obs-theme.light-mode .vu-meter {
+  background-color: #d4d9e6;
+  border-color: #b8c0d4;
+}
+
+body.obs-theme.light-mode .obs-fader {
+  background: #d4d9e6;
+  border-color: #b8c0d4;
+}
+
+body.obs-theme.light-mode .obs-fader::-webkit-slider-thumb {
+  background: #ffffff;
+  border-color: #8c95ac;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+body.obs-theme.light-mode .obs-select {
+  background-color: #ffffff;
+  border-color: #cad1e2;
+  color: var(--obs-text-primary);
+}
+
+body.obs-theme.light-mode .obs-btn-record {
+  background-color: #274cc8;
+  border-color: #1f3fa8;
+  color: #fff;
+}
+
+body.obs-theme.light-mode .obs-btn-record:not(:disabled):hover {
+  background-color: #1f3fa8;
+}
+
+body.obs-theme.light-mode .obs-modal-card {
+  background-color: #ffffff;
+  border-color: #cad0df;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+body.obs-theme.light-mode .obs-modal-header {
+  background-color: var(--obs-header);
+  border-bottom-color: var(--obs-border);
+}
+
+body.obs-theme.light-mode .obs-modal-title {
+  color: #192033;
+}
+
+body.obs-theme.light-mode .obs-modal-close {
+  color: #636c84;
+}
+
+body.obs-theme.light-mode .obs-modal-close:hover {
+  color: #192033;
+}
+
+body.obs-theme.light-mode .obs-modal-footer {
+  background-color: var(--obs-header);
+  border-top-color: var(--obs-border);
+}
+
+body.obs-theme.light-mode .meta-card,
+body.obs-theme.light-mode .shortcut-row {
+  background: #f4f6fb;
+  border-color: #d4dae8;
+}
+
+body.obs-theme.light-mode .meta-val {
+  color: #192033;
+}
+
+body.obs-theme.light-mode .shortcut-row kbd {
+  background: #e5e9f3;
+  border-color: #c4cce0;
+  color: #192033;
+}
+
+body.obs-theme.light-mode .obs-toast {
+  background: #1e2436;
+  color: #fff;
+  border-color: #38425e;
 }

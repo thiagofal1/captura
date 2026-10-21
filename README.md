@@ -22,7 +22,8 @@ Enquanto muitas soluções do mercado exigem contas obrigatórias, enviam seus v
 
 - 🔒 **100% Privado e Local:** Nenhum byte de vídeo é enviado para a nuvem. O processamento acontece diretamente na memória do navegador.
 - 🚀 **Zero Instalações:** Sem extensões pesadas ou executáveis de terceiros. Basta abrir a página e gravar.
-- 🎬 **Interface Estilo OBS Studio:** Visual pro escuro (*dark theme*) com docks modulares (Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles de Gravação), canvas 16:9 e barra de status em tempo real.
+- 🎬 **Interface Estilo OBS Studio:** Visual pro modular (Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles de Gravação), canvas 16:9 e barra de status em tempo real.
+- 🌓 **Modo Escuro e Modo Claro em 1 Clique:** Alternância instantânea no topo (`🌙 Escuro` / `☀️ Claro`) com persistência automática no `localStorage`.
 - ⏱️ **Contagem Regressiva (3..2..1...):** Overlay com animação antes do início real da gravação, dando tempo para você alternar para a janela desejada (com atalho para pular com `Espaço`).
 - 🎚️ **Mixer de Áudio Profissional & VU Meters:**
   - Barras animadas de decibéis em tempo real (-50 dB a 0 dB) para Áudio do Desktop e Microfone.

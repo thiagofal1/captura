@@ -26,6 +26,9 @@
   const menuHelpBtn = document.querySelector('#menuHelpBtn');
   const testMicBtn = document.querySelector('#testMicBtn');
   const menuAudioBtn = document.querySelector('#menuAudioBtn');
+  const themeToggleBtn = document.querySelector('#themeToggleBtn');
+  const themeToggleIcon = document.querySelector('#themeToggleIcon');
+  const themeToggleText = document.querySelector('#themeToggleText');
 
   // Overlays & Tags
   const countdownOverlay = document.querySelector('#countdownOverlay');
@@ -855,13 +858,44 @@
     }
   });
 
+  // --- Theme (Light / Dark) Toggle Logic ---
+  function initTheme() {
+    const savedTheme = localStorage.getItem('captura-theme');
+    // Default to dark mode (OBS default) unless user specifically chose light
+    const isLight = savedTheme === 'light';
+
+    if (isLight) {
+      document.body.classList.add('light-mode');
+      if (themeToggleIcon) themeToggleIcon.textContent = '☀️';
+      if (themeToggleText) themeToggleText.textContent = 'Claro';
+    } else {
+      document.body.classList.remove('light-mode');
+      if (themeToggleIcon) themeToggleIcon.textContent = '🌙';
+      if (themeToggleText) themeToggleText.textContent = 'Escuro';
+    }
+  }
+
+  function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-mode');
+    const newTheme = isLight ? 'light' : 'dark';
+    localStorage.setItem('captura-theme', newTheme);
+    if (themeToggleIcon) themeToggleIcon.textContent = isLight ? '☀️' : '🌙';
+    if (themeToggleText) themeToggleText.textContent = isLight ? 'Claro' : 'Escuro';
+    showToast(isLight ? 'Modo Claro ativado' : 'Modo Escuro ativado', 2000);
+  }
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+  }
+
   // Clean up on window unload
   window.addEventListener('beforeunload', () => {
     cleanupStreams();
     if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   });
 
-  // Initial badge update
+  // Initializations
+  initTheme();
   updateQualityBadge();
 
 })();

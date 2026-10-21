@@ -58,8 +58,8 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
   - Opção de espelhamento (flip horizontal) e ajuste de posição (cantos da tela).
 - [ ] **Exportação para GIF Otimizado:**
   - Botão de download rápido em formato `.gif` de alta fluidez (15–24 fps), pensado para Pull Requests, issues do GitHub e chats (Slack/Discord).
-- [ ] **Modo Escuro (Dark Mode):**
-  - Suporte ao tema escuro nativo com botão toggle e sincronização automática com `prefers-color-scheme`.
+- [x] **Alternância de Tema (Modo Escuro & Modo Claro em 1 Clique):**
+  - Botão na barra superior (`🌙 Escuro` / `☀️ Claro`) com persistência no `localStorage` e paleta adaptada para alto contraste e legibilidade.
 - [ ] **Efeito Visual no Clique do Mouse (Click Ripple):**
   - Destaque visual (círculo animado) na posição dos cliques para melhorar vídeos de tutoriais e demonstrações.
 - [ ] **Deploy Público Oficial (GitHub Pages):**
@@ -107,6 +107,7 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | Correção de Duração WebM | **v1.1** | Baixo | Alto | 🟢 Concluído |
 | Atalhos de Teclado | **v1.1** | Baixo | Médio | 🟢 Concluído |
 | Interface Dark OBS Studio | **v1.1** | Médio | Muito Alto | 🟢 Concluído |
+| Modo Claro / Escuro (1 Clique) | **v1.1** | Baixo | Alto | 🟢 Concluído |
 | Facecam PiP (Bolinha de Câmera) | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
 | Exportador de GIF Otimizado | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
 | Editor Trim (Corte de Bordas) | **v1.3** | Médio | Alto | 🟡 Planejado |
