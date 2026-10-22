@@ -29,12 +29,6 @@
           <span class="theme-icon" id="themeToggleIcon">🌙</span>
           <span class="theme-text" id="themeToggleText">Escuro</span>
         </button>
-        <span class="meta-tag meta-private">
-          <span class="lock-icon" aria-hidden="true">🔒</span> 100% Local & Privado
-        </span>
-        <span class="meta-tag meta-deploy">
-          <span class="deploy-dot"></span> Vercel Deploy
-        </span>
       </div>
     </header>
 
@@ -283,6 +277,15 @@
           <div class="dock-content dock-content-compact">
             
             <div class="obs-form-group">
+              <label class="obs-label" for="formatSelect">Formato do Arquivo</label>
+              <select class="obs-select" id="formatSelect">
+                <option value="mp4">MP4 · Universal (.mp4)</option>
+                <option value="mkv">MKV · Matroska OBS (.mkv)</option>
+                <option value="webm" selected>WebM · Web Otimizado (.webm)</option>
+              </select>
+            </div>
+
+            <div class="obs-form-group">
               <label class="obs-label" for="qualitySelect">Qualidade do Vídeo</label>
               <select class="obs-select" id="qualitySelect">
                 <option value="standard">Padrão · 720p (2.5 Mbps)</option>
@@ -310,7 +313,7 @@
 
           </div>
           <div class="dock-bottom-bar">
-            <span class="dock-mini-info">Metadados WebM ativos</span>
+            <span class="dock-mini-info" id="currentFormatBadge">WebM · EBML Corrigido</span>
           </div>
         </div>
 
@@ -368,6 +371,68 @@
         <span class="status-metric" id="statusSizeMetric">Tamanho: <strong id="statusSizeDisplay">0.0 MB</strong></span>
       </div>
     </footer>
+
+    <!-- File & Output Format Modal (Arquivo) -->
+    <div class="obs-modal-backdrop" id="fileModal" hidden>
+      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="fileModalTitle">
+        <div class="obs-modal-header">
+          <span class="obs-modal-title" id="fileModalTitle">📁 Arquivo — Formato de Gravação de Vídeo</span>
+          <button class="obs-modal-close" id="closeFileModal" type="button" aria-label="Fechar">×</button>
+        </div>
+        <div class="obs-modal-body">
+          <p class="format-modal-desc">
+            Escolha o formato em que os seus vídeos serão salvos. A gravação e a conversão acontecem 100% no seu computador, de forma segura e privada.
+          </p>
+
+          <div class="format-cards-grid">
+            
+            <!-- MP4 Option -->
+            <label class="format-card" for="modalFormatMp4">
+              <input type="radio" name="modalOutputFormat" id="modalFormatMp4" value="mp4">
+              <div class="format-card-content">
+                <div class="format-card-header">
+                  <span class="format-badge format-badge-mp4">MP4</span>
+                  <strong>MPEG-4 (.mp4)</strong>
+                  <span class="format-tag">Máxima Compatibilidade</span>
+                </div>
+                <p>Compatível com WhatsApp, iPhone, Android, Instagram e programas de edição como Adobe Premiere e DaVinci Resolve.</p>
+              </div>
+            </label>
+
+            <!-- MKV Option -->
+            <label class="format-card" for="modalFormatMkv">
+              <input type="radio" name="modalOutputFormat" id="modalFormatMkv" value="mkv">
+              <div class="format-card-content">
+                <div class="format-card-header">
+                  <span class="format-badge format-badge-mkv">MKV</span>
+                  <strong>Matroska Video (.mkv)</strong>
+                  <span class="format-tag">Padrão OBS Studio</span>
+                </div>
+                <p>O formato padrão do OBS. Resistente a falhas e corrupção em gravações longas, excelente no VLC e players modernos.</p>
+              </div>
+            </label>
+
+            <!-- WebM Option -->
+            <label class="format-card" for="modalFormatWebm">
+              <input type="radio" name="modalOutputFormat" id="modalFormatWebm" value="webm" checked>
+              <div class="format-card-content">
+                <div class="format-card-header">
+                  <span class="format-badge format-badge-webm">WEBM</span>
+                  <strong>WebM (.webm)</strong>
+                  <span class="format-tag">Otimizado Web</span>
+                </div>
+                <p>Formato nativo ultra leve para navegadores com VP9/Opus e cabeçalho de duração corrigido para scrubbing suave.</p>
+              </div>
+            </label>
+
+          </div>
+        </div>
+        <div class="obs-modal-footer">
+          <button class="obs-btn obs-btn-secondary" id="cancelFileModalBtn" type="button">Cancelar</button>
+          <button class="obs-btn obs-btn-record" id="saveFileFormatBtn" type="button">Salvar Formato</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Result / Download Modal (OBS Dialog Style) -->
     <div class="obs-modal-backdrop" id="resultModal" hidden>

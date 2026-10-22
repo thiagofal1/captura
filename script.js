@@ -86,7 +86,16 @@
   const qualitySelect = document.querySelector('#qualitySelect');
   const fpsSelect = document.querySelector('#fpsSelect');
   const countdownSelect = document.querySelector('#countdownSelect');
+  const formatSelect = document.querySelector('#formatSelect');
+  const currentFormatBadge = document.querySelector('#currentFormatBadge');
   const sceneItems = document.querySelectorAll('.scene-item');
+
+  // File / Format Modal
+  const fileModal = document.querySelector('#fileModal');
+  const closeFileModal = document.querySelector('#closeFileModal');
+  const cancelFileModalBtn = document.querySelector('#cancelFileModalBtn');
+  const saveFileFormatBtn = document.querySelector('#saveFileFormatBtn');
+  const menuFileBtn = document.querySelector('#menuFileBtn');
 
   // Modals & Toast
   const resultModal = document.querySelector('#resultModal');
@@ -109,6 +118,17 @@
     high: 5_000_000,
     maximum: 8_500_000,
   };
+
+  // Preference candidates per desired container
+  const formatMimeCandidates = {
+    mp4:  ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4'],
+    mkv:  ['video/x-matroska;codecs=avc1,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'],
+    webm: ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'],
+  };
+
+  // Resolved state (updated when user saves the format modal)
+  let chosenFormat = 'webm';   // 'mp4' | 'mkv' | 'webm'
+  let resolvedMimeType = '';   // actual mime type the browser accepted
 
   // --- State Variables ---
   let displayStream = null;
@@ -365,14 +385,35 @@
   }
 
   // --- Supported Mime Types ---
-  function getSupportedMimeType() {
+  // Returns the best mime type the browser supports for the chosen container.
+  function getSupportedMimeType(fmt) {
     if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') return '';
-    return [
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm',
-      'video/mp4',
-    ].find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    const candidates = formatMimeCandidates[fmt] || formatMimeCandidates.webm;
+    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+  }
+
+  // Derive the file extension from the actual mime type used
+  function extensionFromMime(mime) {
+    if (!mime) return chosenFormat;
+    if (mime.includes('mp4'))       return 'mp4';
+    if (mime.includes('matroska'))  return 'mkv';
+    return 'webm';
+  }
+
+  // Human-readable format label for the dock badge / result modal
+  function formatLabel(fmt, mime) {
+    const ext = (extensionFromMime(mime) || fmt).toUpperCase();
+    const isWebm = (mime || '').includes('webm');
+    if (fmt === 'mp4')  return `${ext} · H.264 / AAC`;
+    if (fmt === 'mkv')  return `${ext} · ${isWebm ? 'VP9 / Opus' : 'AVC / Opus'}`;
+    return `${ext} · ${isWebm ? 'EBML Corrigido' : 'Padrão'}`;
+  }
+
+  // Sync badge in Configurações dock
+  function syncFormatBadge() {
+    const label = formatLabel(chosenFormat, resolvedMimeType);
+    if (currentFormatBadge) currentFormatBadge.textContent = label;
+    if (formatSelect) formatSelect.value = chosenFormat;
   }
 
   // --- Release Streams & Cleanup ---
@@ -594,7 +635,8 @@
       const finalRecordingStream = new MediaStream(outputTracks);
 
       // 4. Configure MediaRecorder
-      const mimeType = getSupportedMimeType();
+      const mimeType = getSupportedMimeType(chosenFormat);
+      resolvedMimeType = mimeType;
       const bitrate = qualityBitrates[qualitySelect.value] || 5_000_000;
       const options = { videoBitsPerSecond: bitrate };
       if (mimeType) options.mimeType = mimeType;
@@ -666,10 +708,10 @@
   // --- Handle Finished Recording & WebM Fix ---
   async function handleRecordingFinished() {
     const totalDuration = Math.max(1000, Date.now() - startedAt - pausedDuration);
-    const mimeType = recorder?.mimeType || 'video/webm';
+    const mimeType = recorder?.mimeType || resolvedMimeType || 'video/webm';
     const rawBlob = new Blob(recordedChunks, { type: mimeType });
     const isWebm = mimeType.includes('webm');
-    const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+    const extension = extensionFromMime(mimeType);
 
     resetControls();
     cleanupStreams();
@@ -708,7 +750,7 @@
     
     resultDurationVal.textContent = formatTime(totalDuration);
     resultSizeVal.textContent = formatBytes(finalBlob.size);
-    resultFormatVal.textContent = `${extension.toUpperCase()} · ${isWebm ? 'EBML Corrigido' : 'Padrão'}`;
+    resultFormatVal.textContent = formatLabel(chosenFormat, mimeType);
 
     // Enable dock download button
     downloadButton.disabled = false;
@@ -1078,6 +1120,75 @@
 
   qualitySelect.addEventListener('change', updateQualityBadge);
   fpsSelect.addEventListener('change', updateQualityBadge);
+
+  // formatSelect in Settings dock (live preview only — does not commit until Arquivo modal Save)
+  if (formatSelect) {
+    formatSelect.addEventListener('change', () => {
+      // Preview the selected format in the badge, but do not commit yet
+      const previewFmt = formatSelect.value;
+      const previewMime = getSupportedMimeType(previewFmt);
+      const supported = previewMime !== '' || previewFmt === 'mp4'; // mp4 may not report via isTypeSupported on all browsers
+      if (currentFormatBadge) {
+        currentFormatBadge.textContent = supported
+          ? formatLabel(previewFmt, previewMime)
+          : `${previewFmt.toUpperCase()} · Não suportado neste navegador`;
+      }
+    });
+  }
+
+  // --- File / Format Modal ---
+  function openFileModal() {
+    if (!fileModal) return;
+    // Sync radio buttons to current chosenFormat
+    const radio = fileModal.querySelector(`input[value="${chosenFormat}"]`);
+    if (radio) radio.checked = true;
+    fileModal.hidden = false;
+  }
+  function closeFileModalFn() {
+    if (fileModal) fileModal.hidden = true;
+  }
+
+  if (menuFileBtn)        menuFileBtn.addEventListener('click', openFileModal);
+  if (closeFileModal)     closeFileModal.addEventListener('click', closeFileModalFn);
+  if (cancelFileModalBtn) cancelFileModalBtn.addEventListener('click', closeFileModalFn);
+
+  if (saveFileFormatBtn) {
+    saveFileFormatBtn.addEventListener('click', () => {
+      const checked = fileModal.querySelector('input[name="modalOutputFormat"]:checked');
+      if (!checked) { closeFileModalFn(); return; }
+
+      const newFmt = checked.value;
+      const mime   = getSupportedMimeType(newFmt);
+
+      // Warn if the browser can't actually record in the chosen format
+      if (!mime) {
+        const labels = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
+        showToast(
+          `⚠️ Seu navegador não suporta gravação em ${labels[newFmt]}. Tente MP4 ou WebM.`,
+          5000
+        );
+        return;
+      }
+
+      chosenFormat     = newFmt;
+      resolvedMimeType = mime;
+
+      // Sync the Settings dock select & badge
+      if (formatSelect) formatSelect.value = chosenFormat;
+      syncFormatBadge();
+
+      const labels = { mp4: 'MP4 (.mp4)', mkv: 'MKV (.mkv)', webm: 'WebM (.webm)' };
+      showToast(`Formato salvo: ${labels[chosenFormat]}`, 3000);
+      closeFileModalFn();
+    });
+  }
+
+  // Close File modal on backdrop click
+  if (fileModal) {
+    fileModal.addEventListener('click', (e) => {
+      if (e.target === fileModal) closeFileModalFn();
+    });
+  }
 
   // Result Modal Actions
   closeResultModal.addEventListener('click', () => {

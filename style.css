@@ -1418,6 +1418,126 @@ body.obs-theme.light-mode .canvas-action-btn.active {
   color: var(--obs-text-secondary);
 }
 
+/* Format Selection Modal (Arquivo) */
+.format-modal-desc {
+  font-size: 11px;
+  color: var(--obs-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.format-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.format-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #171823;
+  border: 1px solid #272a3b;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.format-card:hover {
+  background: #1f2130;
+  border-color: #3f445e;
+}
+
+.format-card:has(input:checked) {
+  background: #1e2645;
+  border-color: #3b6bd6;
+  box-shadow: 0 0 10px rgba(47, 92, 232, 0.25);
+}
+
+.format-card input[type="radio"] {
+  margin-top: 3px;
+  cursor: pointer;
+  accent-color: var(--obs-accent-blue);
+}
+
+.format-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.format-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.format-card-header strong {
+  font-size: 12px;
+  color: var(--obs-text-primary);
+}
+
+.format-card-content p {
+  font-size: 10px;
+  color: var(--obs-text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.format-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.format-badge-mp4 {
+  background: #193863;
+  color: #5ea8ff;
+  border: 1px solid #255291;
+}
+
+.format-badge-mkv {
+  background: #4a2814;
+  color: #ff9d5c;
+  border: 1px solid #7a3e1a;
+}
+
+.format-badge-webm {
+  background: #153c3e;
+  color: #4ee0db;
+  border: 1px solid #206265;
+}
+
+.format-tag {
+  font-size: 9px;
+  color: #38d39f;
+  margin-left: auto;
+  font-weight: 600;
+}
+
+body.obs-theme.light-mode .format-card {
+  background: #f4f6fb;
+  border-color: #d4dae8;
+}
+
+body.obs-theme.light-mode .format-card:hover {
+  background: #e9edf7;
+}
+
+body.obs-theme.light-mode .format-card:has(input:checked) {
+  background: #e6edfc;
+  border-color: #2f5ce8;
+  box-shadow: 0 0 10px rgba(47, 92, 232, 0.15);
+}
+
+body.obs-theme.light-mode .format-tag {
+  color: #0d8b58;
+}
+
 /* ==========================================================================
    Toast Notification
    ========================================================================== */
