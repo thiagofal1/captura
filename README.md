@@ -128,7 +128,9 @@ npx serve .
 # Ou com a extensão "Live Server" do VS Code
 ```
 
-Em seguida, acesse no navegador: `http://localhost:3000`.
+Em seguida, acesse no navegador:
+- **Landing Page:** `http://localhost:3000/`
+- **Captura Studio (Gravador):** `http://localhost:3000/studio`
 
 ---
 

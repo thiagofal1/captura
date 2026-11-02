@@ -1,16 +1,21 @@
-const CACHE_NAME = 'captura-studio-v1.3';
+const CACHE_NAME = 'captura-studio-v1.4';
 const ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './script.js',
-  './fix-webm-duration.js',
-  './manifest.json'
+  '/',
+  '/index.html',
+  '/landing.css',
+  '/landing.js',
+  '/manifest.json',
+  '/studio',
+  '/studio/index.html',
+  '/studio/style.css',
+  '/studio/script.js',
+  '/studio/fix-webm-duration.js',
+  '/studio/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
   );
   self.skipWaiting();
 });
@@ -41,4 +46,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-

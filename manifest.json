@@ -2,7 +2,7 @@
   "name": "Captura Studio — Gravador de Tela Web",
   "short_name": "Captura Studio",
   "description": "Gravador de tela e áudio profissional no navegador, inspirado no OBS Studio. 100% local, sem limites e sem upload para nuvem.",
-  "start_url": "./index.html",
+  "start_url": "/studio",
   "display": "standalone",
   "background_color": "#161720",
   "theme_color": "#161720",
@@ -16,4 +16,3 @@
     }
   ]
 }
-

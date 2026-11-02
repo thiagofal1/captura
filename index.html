@@ -4,599 +4,450 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#161720">
-  <title>Captura Studio — Gravador de Tela Web</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
-  <script src="fix-webm-duration.js"></script>
-  <script src="script.js" defer></script>
+  <meta name="description" content="Grave sua tela diretamente do navegador com visual OBS Studio, Moldura Screen Studio, Webcam PiP arrastável, Mixer de Áudio, Trim e exportação em MP4, MKV, WebM ou GIF. 100% local e gratuito.">
+  <title>Captura — Gravador de Tela Web Profissional & 100% Local</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/landing.css">
+  <script src="/landing.js" defer></script>
 </head>
-<body class="obs-theme">
-  <div class="app-window">
-    
-    <!-- OBS Top Menu Bar -->
-    <header class="obs-menu-bar">
-      <div class="menu-items">
-        <span class="obs-brand">
-          <span class="obs-logo-dot"></span>
-          <strong>Captura</strong> Studio
-        </span>
-        <button class="menu-btn" id="menuFileBtn" type="button">Arquivo</button>
-        <button class="menu-btn" id="menuHistoryBtn" type="button">Gravações <span class="menu-count-badge" id="historyCountBadge" hidden>0</span></button>
-        <button class="menu-btn" id="menuDevicesBtn" type="button">Dispositivos</button>
-        <button class="menu-btn" id="menuShortcutsBtn" type="button">Atalhos</button>
-        <button class="menu-btn" id="menuAudioBtn" type="button">Testar Áudio</button>
-        <button class="menu-btn" id="menuHelpBtn" type="button">Ajuda</button>
-      </div>
-      <div class="menu-meta">
-        <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Alternar Modo Claro / Escuro" aria-label="Alternar tema claro e escuro">
-          <span class="theme-icon" id="themeToggleIcon">🌙</span>
-          <span class="theme-text" id="themeToggleText">Escuro</span>
+<body class="landing-body">
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="container nav-container">
+      <a href="/" class="brand-logo" aria-label="Captura — Página Inicial">
+        <span class="brand-dot"></span>
+        <span class="brand-name"><strong>Captura</strong> Studio</span>
+        <span class="brand-version">v1.3</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Navegação principal">
+        <a href="#demo" class="nav-link">Prévia Interativa</a>
+        <a href="#recursos" class="nav-link">Recursos</a>
+        <a href="#como-funciona" class="nav-link">Como Funciona</a>
+        <a href="#comparativo" class="nav-link">Comparativo</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="theme-toggle-btn" id="landingThemeToggle" type="button" title="Alternar Modo Claro / Escuro" aria-label="Alternar tema claro e escuro">
+          <span class="theme-icon" id="landingThemeIcon">🌙</span>
+          <span class="theme-text" id="landingThemeText">Escuro</span>
         </button>
-      </div>
-    </header>
-
-    <!-- OBS Main Viewport (Canvas Preview) -->
-    <main class="obs-main">
-      <div class="canvas-viewport" id="canvasViewport">
-        <div class="preview-canvas-container" id="previewArea">
-          <video id="previewVideo" autoplay muted playsinline aria-label="Pré-visualização da gravação"></video>
-          
-          <!-- Idle / Empty Canvas Placeholder -->
-          <div class="canvas-empty" id="canvasEmpty">
-            <div class="obs-canvas-target" aria-hidden="true">
-              <div class="target-cross"></div>
-              <div class="target-center">▶</div>
-            </div>
-            <div class="canvas-empty-text">
-              <strong>Pré-visualização do Programa</strong>
-              <span>Clique em <b>Iniciar Gravação</b> ou pressione <kbd>Espaço</kbd> para selecionar a tela</span>
-            </div>
-            <div class="canvas-guide-badge">TELA CHEIA · JANELA · GUIA DO NAVEGADOR</div>
-          </div>
-
-          <!-- Countdown Overlay (3, 2, 1...) -->
-          <div class="countdown-overlay" id="countdownOverlay" hidden>
-            <div class="countdown-circle">
-              <span class="countdown-number" id="countdownNumber">3</span>
-            </div>
-            <p class="countdown-label">Prepare sua janela...</p>
-            <button class="countdown-skip-btn" id="skipCountdownBtn" type="button">Pular contagem (Espaço)</button>
-          </div>
-
-          <!-- Draggable Facecam PiP (Webcam) -->
-          <div class="facecam-pip" id="facecamPip" hidden>
-            <div class="facecam-video-wrap" id="facecamVideoWrap">
-              <video id="webcamVideo" autoplay muted playsinline></video>
-            </div>
-            <div class="facecam-toolbar">
-              <span class="facecam-drag-indicator" title="Arraste para mover na tela">✥</span>
-              <button class="facecam-btn" id="facecamShapeBtn" title="Alternar formato: Círculo / Retângulo" type="button">●</button>
-              <button class="facecam-btn" id="facecamMirrorBtn" title="Espelhar imagem da câmera" type="button">↔</button>
-              <button class="facecam-btn" id="facecamPipPopoutBtn" title="Flutuar câmera fora do navegador (PiP)" type="button">❐</button>
-              <button class="facecam-btn facecam-close" id="facecamCloseBtn" title="Desativar Câmera" type="button">×</button>
-            </div>
-          </div>
-
-          <!-- Canvas Live Indicators -->
-          <div class="canvas-overlay-top">
-            <div class="canvas-tag live-tag" id="liveTag" hidden>
-              <span class="live-dot"></span> GRAVANDO AO VIVO
-            </div>
-            <div class="canvas-tag timer-tag" id="timerTag" hidden>
-              00:00:00
-            </div>
-          </div>
-        </div>
-
-        <!-- Canvas Toolbar (like OBS: "Dimensionar à janela", info) -->
-        <div class="canvas-toolbar">
-          <div class="canvas-toolbar-left">
-            <span class="canvas-tool-label">Modo: <b>Ajustar à janela</b></span>
-            <span class="tool-sep">|</span>
-            <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
-          </div>
-          <div class="canvas-toolbar-right">
-            <button class="canvas-action-btn" id="canvasStudioFrameBtn" type="button" title="Ativar/Desativar Moldura Estúdio (Gradiente + Cantos Arredondados)">
-              <span class="cam-icon">✨</span> Moldura Estúdio
-            </button>
-            <button class="canvas-action-btn" id="canvasWebcamToggleBtn" type="button" title="Ligar/Desligar Câmera Flutuante">
-              <span class="cam-icon">📷</span> Câmera (PiP)
-            </button>
-            <span class="canvas-quality-badge" id="canvasQualityBadge">1080p · 60 FPS</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- OBS Bottom Docks Area -->
-      <section class="obs-docks" aria-label="Painéis do Estúdio">
-        
-        <!-- Dock 1: Cenas / Modos -->
-        <div class="dock-panel dock-scenes">
-          <div class="dock-header">
-            <span class="dock-title">Cenas</span>
-            <div class="dock-tools"><span class="dock-icon">▢</span></div>
-          </div>
-          <div class="dock-content">
-            <ul class="scene-list" id="sceneList">
-              <li class="scene-item active" data-scene="standard">
-                <span class="scene-marker"></span>
-                <span class="scene-name">Tela & Áudio Total</span>
-              </li>
-              <li class="scene-item" data-scene="screen-only">
-                <span class="scene-marker"></span>
-                <span class="scene-name">Apenas Tela (Mudo)</span>
-              </li>
-              <li class="scene-item" data-scene="narration">
-                <span class="scene-marker"></span>
-                <span class="scene-name">Tutorial (Tela + Mic)</span>
-              </li>
-            </ul>
-          </div>
-          <div class="dock-bottom-bar">
-            <button class="dock-mini-btn" title="Cena Padrão" type="button">+</button>
-            <button class="dock-mini-btn" title="Redefinir" type="button">↺</button>
-            <span class="dock-mini-info">3 predefinições</span>
-          </div>
-        </div>
-
-        <!-- Dock 2: Fontes (Sources) -->
-        <div class="dock-panel dock-sources">
-          <div class="dock-header">
-            <span class="dock-title">Fontes</span>
-            <div class="dock-tools"><span class="dock-icon">▢</span></div>
-          </div>
-          <div class="dock-content">
-            <div class="source-list">
-              <!-- Source: Screen -->
-              <div class="source-item" id="sourceScreenItem">
-                <button class="source-toggle-btn active" id="toggleScreenBtn" title="Ativar/Desativar Captura de Tela" type="button">
-                  <span class="source-eye-icon">👁</span>
-                </button>
-                <span class="source-lock-icon">🔒</span>
-                <div class="source-info">
-                  <span class="source-title">Captura de Monitor</span>
-                  <span class="source-sub" id="sourceScreenStatus">Pronto</span>
-                </div>
-              </div>
-              <!-- Source: Mic -->
-              <div class="source-item" id="sourceMicItem">
-                <button class="source-toggle-btn active" id="toggleMicBtn" title="Ligar/Desligar Microfone" type="button">
-                  <span class="source-eye-icon" id="micEyeIcon">👁</span>
-                </button>
-                <span class="source-lock-icon">🔒</span>
-                <div class="source-info">
-                  <span class="source-title">Microfone / Aux</span>
-                  <span class="source-sub" id="sourceMicStatus">Ativo</span>
-                </div>
-              </div>
-              <!-- Source: Desktop Audio -->
-              <div class="source-item" id="sourceSysAudioItem">
-                <button class="source-toggle-btn active" id="toggleSysAudioBtn" title="Ligar/Desligar Áudio Desktop" type="button">
-                  <span class="source-eye-icon" id="sysEyeIcon">👁</span>
-                </button>
-                <span class="source-lock-icon">🔒</span>
-                <div class="source-info">
-                  <span class="source-title">Áudio do Desktop</span>
-                  <span class="source-sub" id="sourceSysAudioStatus">Ativo</span>
-                </div>
-              </div>
-              <!-- Source: Webcam -->
-              <div class="source-item" id="sourceWebcamItem">
-                <button class="source-toggle-btn muted" id="toggleWebcamBtn" title="Ligar/Desligar Câmera (Webcam)" type="button">
-                  <span class="source-eye-icon" id="webcamEyeIcon">📷</span>
-                </button>
-                <span class="source-lock-icon">🔒</span>
-                <div class="source-info">
-                  <span class="source-title">Câmera (Facecam PiP)</span>
-                  <span class="source-sub" id="sourceWebcamStatus">Desativada</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="dock-bottom-bar">
-            <button class="dock-mini-btn" id="sourceSettingsBtn" title="Selecionar Microfone, Webcam e Estilo da Câmera" type="button">⚙</button>
-            <span class="dock-mini-info">Fontes nativas</span>
-          </div>
-        </div>
-
-        <!-- Dock 3: Mixer de Áudio (Audio Mixer with VU Meters) -->
-        <div class="dock-panel dock-mixer">
-          <div class="dock-header">
-            <span class="dock-title">Mixer de áudio</span>
-            <div class="dock-tools"><span class="dock-icon">▢</span></div>
-          </div>
-          <div class="dock-content dock-content-mixer">
-            
-            <!-- Desktop Audio Channel -->
-            <div class="mixer-channel" id="desktopMixerChannel">
-              <div class="channel-header">
-                <span class="channel-title">Áudio do desktop</span>
-                <span class="channel-db" id="desktopDbLabel">-inf dB</span>
-              </div>
-              <div class="channel-body">
-                <button class="mixer-mute-btn" id="desktopMuteBtn" title="Silenciar Áudio Desktop" type="button">
-                  <span class="mute-icon" id="desktopMuteIcon">🔊</span>
-                </button>
-                <div class="vu-wrapper">
-                  <div class="vu-meter">
-                    <div class="vu-fill" id="desktopVuFill" style="width: 0%;"></div>
-                  </div>
-                  <div class="vu-scale">
-                    <span>-50</span>
-                    <span>-40</span>
-                    <span>-30</span>
-                    <span>-20</span>
-                    <span>-10</span>
-                    <span>-5</span>
-                    <span>0</span>
-                  </div>
-                </div>
-              </div>
-              <div class="channel-fader-row">
-                <input class="obs-fader" id="desktopFader" type="range" min="0" max="1" step="0.01" value="1" title="Volume do Desktop">
-              </div>
-            </div>
-
-            <!-- Mic Audio Channel -->
-            <div class="mixer-channel" id="micMixerChannel">
-              <div class="channel-header">
-                <span class="channel-title">Mic / Narração</span>
-                <span class="channel-db" id="micDbLabel">-inf dB</span>
-              </div>
-              <div class="channel-body">
-                <button class="mixer-mute-btn" id="micMuteBtn" title="Silenciar Microfone" type="button">
-                  <span class="mute-icon" id="micMuteIcon">🎙️</span>
-                </button>
-                <div class="vu-wrapper">
-                  <div class="vu-meter">
-                    <div class="vu-fill" id="micVuFill" style="width: 0%;"></div>
-                  </div>
-                  <div class="vu-scale">
-                    <span>-50</span>
-                    <span>-40</span>
-                    <span>-30</span>
-                    <span>-20</span>
-                    <span>-10</span>
-                    <span>-5</span>
-                    <span>0</span>
-                  </div>
-                </div>
-              </div>
-              <div class="channel-fader-row">
-                <input class="obs-fader" id="micFader" type="range" min="0" max="1.5" step="0.01" value="1" title="Volume do Microfone">
-              </div>
-            </div>
-
-          </div>
-          <div class="dock-bottom-bar">
-            <button class="dock-mini-btn" id="testMicBtn" title="Testar Microfone agora" type="button">🎙️ Testar Mic</button>
-            <span class="dock-mini-info">Web Audio API</span>
-          </div>
-        </div>
-
-        <!-- Dock 4: Configurações Rápidas -->
-        <div class="dock-panel dock-settings">
-          <div class="dock-header">
-            <span class="dock-title">Configurações</span>
-            <div class="dock-tools"><span class="dock-icon">▢</span></div>
-          </div>
-          <div class="dock-content dock-content-compact">
-            
-            <div class="obs-form-group">
-              <label class="obs-label" for="formatSelect">Formato do Arquivo</label>
-              <select class="obs-select" id="formatSelect">
-                <option value="mp4">MP4 · Universal (.mp4)</option>
-                <option value="mkv">MKV · Matroska OBS (.mkv)</option>
-                <option value="webm" selected>WebM · Web Otimizado (.webm)</option>
-              </select>
-            </div>
-
-            <div class="obs-form-group">
-              <label class="obs-label" for="qualitySelect">Qualidade do Vídeo</label>
-              <select class="obs-select" id="qualitySelect">
-                <option value="standard">Padrão · 720p (2.5 Mbps)</option>
-                <option value="high" selected>Alta · 1080p (5.0 Mbps)</option>
-                <option value="maximum">Máxima · Original (8.0 Mbps)</option>
-              </select>
-            </div>
-
-            <div class="obs-form-group">
-              <label class="obs-label" for="fpsSelect">Taxa de Quadros (FPS)</label>
-              <select class="obs-select" id="fpsSelect">
-                <option value="60" selected>60 FPS (Ultra fluido)</option>
-                <option value="30">30 FPS (Padrão)</option>
-              </select>
-            </div>
-
-            <div class="obs-form-group">
-              <label class="obs-label" for="countdownSelect">Contagem Regressiva</label>
-              <select class="obs-select" id="countdownSelect">
-                <option value="3" selected>3 segundos (Recomendado)</option>
-                <option value="5">5 segundos</option>
-                <option value="0">Desativada (Instantâneo)</option>
-              </select>
-            </div>
-
-          </div>
-          <div class="dock-bottom-bar">
-            <span class="dock-mini-info" id="currentFormatBadge">WebM · EBML Corrigido</span>
-          </div>
-        </div>
-
-        <!-- Dock 5: Controles (OBS Action Controls) -->
-        <div class="dock-panel dock-controls">
-          <div class="dock-header">
-            <span class="dock-title">Controles</span>
-            <div class="dock-tools"><span class="dock-icon">▢</span></div>
-          </div>
-          <div class="dock-content dock-content-controls">
-            <!-- Record Button -->
-            <button class="obs-btn obs-btn-record" id="recordButton" type="button">
-              <span class="btn-rec-dot"></span> Iniciar gravação
-            </button>
-            
-            <!-- Pause Button -->
-            <button class="obs-btn obs-btn-secondary" id="pauseButton" type="button" disabled>
-              <span class="pause-icon" aria-hidden="true">Ⅱ</span> Pausar gravação
-            </button>
-
-            <!-- Download Button -->
-            <button class="obs-btn obs-btn-download" id="downloadButton" type="button" disabled>
-              <span class="download-icon" aria-hidden="true">↓</span> Baixar último vídeo
-            </button>
-
-            <!-- Help / Reset -->
-            <button class="obs-btn obs-btn-secondary" id="shortcutsBtn" type="button">
-              Atalhos de Teclado
-            </button>
-          </div>
-          <div class="dock-bottom-bar">
-            <span class="dock-mini-info" id="shortcutHint">Espaço: Gravar</span>
-          </div>
-        </div>
-
-      </section>
-    </main>
-
-    <!-- OBS Bottom Status Bar -->
-    <footer class="obs-status-bar">
-      <div class="status-left">
-        <span class="status-indicator-dot ready" id="globalStatusDot"></span>
-        <span class="status-label" id="globalStatusText">Pronto para gravar</span>
-      </div>
-      <div class="status-center">
-        <span class="status-pill-badge">Zero Instalações · Zero Cloud</span>
-      </div>
-      <div class="status-right">
-        <span class="status-metric rec-metric" id="recStatusMetric">
-          <span class="rec-dot-mini"></span> REC: <strong id="statusTimerDisplay">00:00:00</strong>
-        </span>
-        <span class="metric-sep">|</span>
-        <span class="status-metric" id="statusFpsMetric">FPS: <strong>60.00</strong></span>
-        <span class="metric-sep">|</span>
-        <span class="status-metric" id="statusSizeMetric">Tamanho: <strong id="statusSizeDisplay">0.0 MB</strong></span>
-      </div>
-    </footer>
-
-    <!-- File & Output Format Modal (Arquivo) -->
-    <div class="obs-modal-backdrop" id="fileModal" hidden>
-      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="fileModalTitle">
-        <div class="obs-modal-header">
-          <span class="obs-modal-title" id="fileModalTitle">📁 Arquivo — Formato de Gravação de Vídeo</span>
-          <button class="obs-modal-close" id="closeFileModal" type="button" aria-label="Fechar">×</button>
-        </div>
-        <div class="obs-modal-body">
-          <p class="format-modal-desc">
-            Escolha o formato em que os seus vídeos serão salvos. A gravação e a conversão acontecem 100% no seu computador, de forma segura e privada.
-          </p>
-
-          <div class="format-cards-grid">
-            
-            <!-- MP4 Option -->
-            <label class="format-card" for="modalFormatMp4">
-              <input type="radio" name="modalOutputFormat" id="modalFormatMp4" value="mp4">
-              <div class="format-card-content">
-                <div class="format-card-header">
-                  <span class="format-badge format-badge-mp4">MP4</span>
-                  <strong>MPEG-4 (.mp4)</strong>
-                  <span class="format-tag">Máxima Compatibilidade</span>
-                </div>
-                <p>Compatível com WhatsApp, iPhone, Android, Instagram e programas de edição como Adobe Premiere e DaVinci Resolve.</p>
-              </div>
-            </label>
-
-            <!-- MKV Option -->
-            <label class="format-card" for="modalFormatMkv">
-              <input type="radio" name="modalOutputFormat" id="modalFormatMkv" value="mkv">
-              <div class="format-card-content">
-                <div class="format-card-header">
-                  <span class="format-badge format-badge-mkv">MKV</span>
-                  <strong>Matroska Video (.mkv)</strong>
-                  <span class="format-tag">Padrão OBS Studio</span>
-                </div>
-                <p>O formato padrão do OBS. Resistente a falhas e corrupção em gravações longas, excelente no VLC e players modernos.</p>
-              </div>
-            </label>
-
-            <!-- WebM Option -->
-            <label class="format-card" for="modalFormatWebm">
-              <input type="radio" name="modalOutputFormat" id="modalFormatWebm" value="webm" checked>
-              <div class="format-card-content">
-                <div class="format-card-header">
-                  <span class="format-badge format-badge-webm">WEBM</span>
-                  <strong>WebM (.webm)</strong>
-                  <span class="format-tag">Otimizado Web</span>
-                </div>
-                <p>Formato nativo ultra leve para navegadores com VP9/Opus e cabeçalho de duração corrigido para scrubbing suave.</p>
-              </div>
-            </label>
-
-          </div>
-        </div>
-        <div class="obs-modal-footer">
-          <button class="obs-btn obs-btn-secondary" id="cancelFileModalBtn" type="button">Cancelar</button>
-          <button class="obs-btn obs-btn-record" id="saveFileFormatBtn" type="button">Salvar Formato</button>
-        </div>
+        <a href="/studio" class="btn btn-primary btn-sm">
+          <span class="rec-dot-inline"></span>
+          Abrir Studio
+        </a>
       </div>
     </div>
+  </header>
 
-    <!-- Result / Download Modal (OBS Dialog Style) -->
-    <div class="obs-modal-backdrop" id="resultModal" hidden>
-      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="obs-modal-header">
-          <span class="obs-modal-title" id="modalTitle">✓ Gravação Concluída</span>
-          <button class="obs-modal-close" id="closeResultModal" type="button" aria-label="Fechar">×</button>
-        </div>
-        <div class="obs-modal-body">
-          <div class="video-preview-wrapper">
-            <video id="resultVideoPlayer" controls playsinline></video>
-          </div>
-          <div class="result-meta-grid">
-            <div class="meta-card">
-              <span class="meta-label">Duração</span>
-              <strong class="meta-val" id="resultDurationVal">00:00:00</strong>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Tamanho do Arquivo</span>
-              <strong class="meta-val" id="resultSizeVal">0 MB</strong>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Formato</span>
-              <strong class="meta-val" id="resultFormatVal">WEBM (Seekable)</strong>
-            </div>
-            <div class="meta-card">
-              <span class="meta-label">Armazenamento</span>
-              <strong class="meta-val" style="color: #4ade80;">100% Local (Salvo no Histórico)</strong>
-            </div>
-          </div>
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-glow hero-glow-left" aria-hidden="true"></div>
+      <div class="hero-glow hero-glow-right" aria-hidden="true"></div>
 
-          <!-- Quick Trim / Cut & GIF Export Bar -->
-          <div class="trim-bar-box" id="trimBarBox">
-            <div class="trim-bar-header">
-              <span class="trim-title">✂️ Corte Rápido (Início / Fim)</span>
-              <span class="trim-range-label" id="trimRangeLabel">Vídeo inteiro</span>
-            </div>
-            <div class="trim-sliders-row">
-              <div class="trim-input-group">
-                <label for="trimStartRange">Início (s)</label>
-                <input type="range" class="obs-fader" id="trimStartRange" min="0" max="10" step="0.1" value="0">
-              </div>
-              <div class="trim-input-group">
-                <label for="trimEndRange">Fim (s)</label>
-                <input type="range" class="obs-fader" id="trimEndRange" min="0" max="10" step="0.1" value="10">
-              </div>
-              <button class="obs-btn obs-btn-secondary" id="applyTrimBtn" type="button" title="Cortar trecho selecionado">
-                ✂️ Cortar Trecho
-              </button>
-            </div>
-          </div>
+      <div class="container hero-container">
+        <div class="hero-badge">
+          <span class="badge-pulse"></span>
+          <span>100% No Navegador · Zero Instalação · Sem Marca d'Água</span>
         </div>
-        <div class="obs-modal-footer">
-          <a class="obs-btn obs-btn-record" id="modalDownloadBtn" href="#" download="gravacao-captura.webm">
-            ⬇ Baixar Vídeo Agora
+
+        <h1 class="hero-title">
+          Transforme sua tela em uma <span class="text-gradient">boa história.</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          O poder do <strong>OBS Studio</strong> combinado com a elegância do <strong>Screen Studio</strong> direto na web.
+          Grave tela cheia, janela ou aba com mixer de áudio em tempo real, câmera PiP arrastável, molduras em gradiente, corte rápido e exportação em <strong>MP4, MKV, WebM ou GIF</strong>.
+        </p>
+
+        <div class="hero-cta-group">
+          <a href="/studio" class="btn btn-rec btn-lg">
+            <span class="rec-dot-inline"></span>
+            Abrir Captura Studio (/studio)
           </a>
-          <button class="obs-btn obs-btn-download" id="exportGifBtn" type="button" title="Converter trecho para GIF animado (ideal para GitHub, Slack e Discord)">
-            🎞️ Baixar como GIF (.gif)
-          </button>
-          <button class="obs-btn obs-btn-secondary" id="modalNewRecordBtn" type="button">
-            Nova Gravação
-          </button>
+          <a href="#demo" class="btn btn-secondary btn-lg">
+            ✨ Testar Prévia Abaixo
+          </a>
         </div>
-      </div>
-    </div>
 
-    <!-- Local Recordings History Modal (IndexedDB) -->
-    <div class="obs-modal-backdrop" id="historyModal" hidden>
-      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
-        <div class="obs-modal-header">
-          <span class="obs-modal-title" id="historyModalTitle">🗂️ Gravações Recentes (Salvas no Navegador)</span>
-          <button class="obs-modal-close" id="closeHistoryModal" type="button" aria-label="Fechar">×</button>
+        <div class="hero-pills" role="list">
+          <span class="hero-pill" role="listitem">✓ Processamento 100% Local</span>
+          <span class="hero-pill" role="listitem">✓ Sem Conta ou Login</span>
+          <span class="hero-pill" role="listitem">✓ Tempo Ilimitado</span>
+          <span class="hero-pill" role="listitem">✓ MP4 · MKV · WebM · GIF</span>
         </div>
-        <div class="obs-modal-body">
-          <p class="format-modal-desc">
-            Suas últimas gravações ficam salvas temporariamente na memória local deste navegador (IndexedDB) para evitar perdas caso feche a aba por acidente.
+
+        <!-- Interactive Studio Mockup Showcase -->
+        <div class="studio-showcase-wrapper" id="demo">
+          <div class="showcase-controls-bar">
+            <span class="showcase-hint">🎮 <strong>Experimente ao vivo:</strong> alterne a moldura, mova a câmera ou teste o tema antes de abrir o Studio:</span>
+            <div class="showcase-Interactive-pills">
+              <button type="button" class="demo-chip active" data-demo-bg="ocean">🌊 Moldura Oceano</button>
+              <button type="button" class="demo-chip" data-demo-bg="emerald">🌿 Esmeralda</button>
+              <button type="button" class="demo-chip" data-demo-bg="sunset">🌇 Cyber Sunset</button>
+              <button type="button" class="demo-chip" data-demo-bg="none">⬛ Sem Moldura</button>
+              <button type="button" class="demo-chip active" id="demoToggleCamBtn">📷 Webcam PiP (Arraste!)</button>
+            </div>
+          </div>
+
+          <div class="mock-obs-window" aria-label="Demonstração interativa do Captura Studio">
+            <!-- Mock Top Bar -->
+            <div class="mock-menubar">
+              <div class="mock-menu-left">
+                <span class="mock-window-dots">
+                  <i></i><i></i><i></i>
+                </span>
+                <span class="mock-brand">
+                  <span class="brand-dot"></span> <strong>Captura</strong> Studio
+                </span>
+                <span class="mock-menu-item">Arquivo</span>
+                <span class="mock-menu-item">Gravações <b class="mock-badge">3</b></span>
+                <span class="mock-menu-item">Dispositivos</span>
+                <span class="mock-menu-item">Atalhos</span>
+              </div>
+              <div class="mock-menu-right">
+                <span class="mock-route-tag">captura / <strong>studio</strong></span>
+              </div>
+            </div>
+
+            <!-- Mock Main Canvas -->
+            <div class="mock-viewport">
+              <div class="mock-canvas-frame studio-bg-ocean" id="mockCanvasFrame">
+                <div class="mock-screen-content">
+                  <div class="mock-app-header">
+                    <span class="mock-url-bar">https://seu-projeto-incrivel.dev/demo</span>
+                    <span class="mock-live-pill"><i class="live-blink"></i> GRAVANDO 00:01:24</span>
+                  </div>
+                  <div class="mock-app-body">
+                    <div class="mock-code-card">
+                      <div class="mock-code-line w-40 accent"></div>
+                      <div class="mock-code-line w-80"></div>
+                      <div class="mock-code-line w-65"></div>
+                      <div class="mock-code-line w-90"></div>
+                      <div class="mock-code-line w-50"></div>
+                      <div class="mock-chart-bars">
+                        <span style="height:45%"></span>
+                        <span style="height:72%"></span>
+                        <span style="height:60%"></span>
+                        <span style="height:92%"></span>
+                        <span style="height:78%"></span>
+                        <span style="height:100%"></span>
+                      </div>
+                    </div>
+                    <div class="mock-stats-col">
+                      <div class="mock-stat-box">
+                        <small>Qualidade</small>
+                        <strong>1080p · 60 FPS</strong>
+                      </div>
+                      <div class="mock-stat-box">
+                        <small>Saída Direta</small>
+                        <strong>MP4 / MKV / GIF</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Interactive Draggable Facecam inside Mockup -->
+                <div class="mock-facecam" id="mockFacecam" title="Arraste para posicionar onde quiser!">
+                  <div class="mock-facecam-avatar">
+                    <svg viewBox="0 0 64 64" width="44" height="44" aria-hidden="true">
+                      <circle cx="32" cy="24" r="11" fill="#edf0f8"/>
+                      <path d="M14 54c2-11 11-17 18-17s16 6 18 17" fill="#edf0f8"/>
+                    </svg>
+                    <span class="mock-cam-live">CAM</span>
+                  </div>
+                  <span class="mock-cam-hint">✥ Arraste</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mock Bottom Docks (OBS Style) -->
+            <div class="mock-docks-grid">
+              <div class="mock-dock">
+                <div class="mock-dock-title">Fontes Ativas</div>
+                <div class="mock-dock-list">
+                  <div class="mock-source-row active"><span>🖥️ Captura de Tela</span> <span>👁️</span></div>
+                  <div class="mock-source-row active"><span>📷 Webcam Flutuante</span> <span>👁️</span></div>
+                  <div class="mock-source-row active"><span>✨ Moldura Estúdio</span> <span>ON</span></div>
+                </div>
+              </div>
+
+              <div class="mock-dock">
+                <div class="mock-dock-title">Mixer de Áudio (Ao Vivo)</div>
+                <div class="mock-mixer-rows">
+                  <div class="mock-meter-group">
+                    <div class="mock-meter-label"><span>🔊 Áudio do Desktop</span> <span>-6 dB</span></div>
+                    <div class="mock-vu-track"><div class="mock-vu-fill vu-anim-1"></div></div>
+                  </div>
+                  <div class="mock-meter-group">
+                    <div class="mock-meter-label"><span>🎙️ Microfone / Aux</span> <span>-3 dB</span></div>
+                    <div class="mock-vu-track"><div class="mock-vu-fill vu-anim-2"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mock-dock mock-controls-dock">
+                <div class="mock-dock-title">Controles</div>
+                <a href="/studio" class="btn btn-rec btn-block">
+                  <span class="rec-dot-inline"></span> Ir para o Studio Real →
+                </a>
+                <div class="mock-format-tags">
+                  <span>MP4</span> · <span>MKV</span> · <span>WebM</span> · <span>GIF</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Features Bento Grid Section -->
+    <section class="features-section" id="recursos">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-eyebrow">RECURSOS DE ESTÚDIO</span>
+          <h2 class="section-title">Tudo o que você precisa para gravar aulas, demos e tutoriais</h2>
+          <p class="section-desc">
+            Sem instalar nada pesado e sem depender de servidores lentos. Abra <code>/studio</code> e comece em segundos.
           </p>
-          <div class="history-list" id="historyList">
-            <div class="history-empty">Nenhuma gravação recente salva ainda.</div>
-          </div>
         </div>
-        <div class="obs-modal-footer">
-          <button class="obs-btn obs-btn-secondary" id="clearHistoryBtn" type="button">🗑️ Limpar Histórico</button>
-          <button class="obs-btn obs-btn-record" id="dismissHistoryBtn" type="button">Fechar</button>
+
+        <div class="features-grid">
+          <article class="feature-card feature-card-highlight">
+            <div class="feature-icon">🎬</div>
+            <h3>Interface Estilo OBS Studio (Escuro & Claro)</h3>
+            <p>
+              Layout profissional com docks para <strong>Cenas, Fontes, Mixer de Áudio, Configurações Rápidas e Controles</strong>. Alterne entre o clássico <em>OBS Dark</em> e o <em>Modo Claro</em> com apenas 1 clique no topo.
+            </p>
+            <span class="feature-tag">Persistência Automática</span>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">✨</div>
+            <h3>Moldura Estúdio (Screen Studio Style)</h3>
+            <p>
+              Ative fundos em gradiente (<em>Oceano, Aurora Esmeralda, Cyber Sunset ou Grafite</em>), cantos arredondados, sombra projetada 3D e destaque visual de cliques em tempo real.
+            </p>
+            <span class="feature-tag">Composição Canvas 60 FPS</span>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h3>Facecam PiP Livremente Arrastável</h3>
+            <p>
+              Adicione sua webcam em formato circular ou retangular, escolha o tamanho (12%, 16% ou 22%), espelhe a imagem e <strong>arraste para qualquer canto da tela</strong> mesmo durante a gravação.
+            </p>
+            <span class="feature-tag">Picture-in-Picture Nativo</span>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🎚️</div>
+            <h3>Mixer Web Audio API & VU Meters</h3>
+            <p>
+              Monitore decibéis em tempo real (-50 dB a 0 dB) com barras coloridas. Controle o volume ou silencie o <strong>Áudio do Sistema</strong> e o <strong>Microfone</strong> de forma independente.
+            </p>
+            <span class="feature-tag">Teste de Áudio Integrado</span>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">✂️</div>
+            <h3>Corte Rápido (Trim) & Exportador GIF</h3>
+            <p>
+              Terminou de gravar? Apare o início e o fim do vídeo imediatamente no player pós-gravação ou baixe como <strong>GIF animado (<code>.gif</code>)</strong> pronto para GitHub, PRs e documentações.
+            </p>
+            <span class="feature-tag">Encoder GIF89a Nativo</span>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon">🗂️</div>
+            <h3>MP4, MKV, WebM + Histórico Local</h3>
+            <p>
+              Escolha o formato de saída ideal (com correção de duração EBML para linha do tempo perfeita) e conte com salvamento automático das últimas 5 gravações no <code>IndexedDB</code> + suporte <strong>PWA Offline</strong>.
+            </p>
+            <span class="feature-tag">Zero Perda de Dados</span>
+          </article>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Devices & Facecam Settings Modal -->
-    <div class="obs-modal-backdrop" id="devicesModal" hidden>
-      <div class="obs-modal-card modal-compact" role="dialog" aria-modal="true" aria-labelledby="devicesModalTitle">
-        <div class="obs-modal-header">
-          <span class="obs-modal-title" id="devicesModalTitle">🎛️ Dispositivos de Áudio, Câmera & Estúdio</span>
-          <button class="obs-modal-close" id="closeDevicesModal" type="button" aria-label="Fechar">×</button>
+    <!-- How It Works Section -->
+    <section class="steps-section" id="como-funciona">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-eyebrow">FLUXO SIMPLIFICADO</span>
+          <h2 class="section-title">Da captura ao download em 3 passos</h2>
+          <p class="section-desc">Projetado para não atrapalhar seu fluxo de trabalho.</p>
         </div>
-        <div class="obs-modal-body">
-          <div class="obs-form-group">
-            <label class="obs-label" for="micDeviceSelect">Microfone de Entrada</label>
-            <select class="obs-select" id="micDeviceSelect">
-              <option value="default">Padrão do Sistema</option>
-            </select>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <h3>Configure seu Estúdio</h3>
+            <p>
+              Acesse <a href="/studio"><code>/studio</code></a>, escolha a qualidade (720p, 1080p ou Original), selecione o formato (<code>MP4</code>, <code>MKV</code> ou <code>WebM</code>) e ative sua câmera ou Moldura Estúdio se desejar.
+            </p>
           </div>
-          <div class="obs-form-group">
-            <label class="obs-label" for="camDeviceSelect">Câmera (Webcam PiP)</label>
-            <select class="obs-select" id="camDeviceSelect">
-              <option value="default">Padrão do Sistema</option>
-            </select>
+
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <h3>Grave com Controle Total</h3>
+            <p>
+              Pressione <kbd>Espaço</kbd> ou clique em <strong>Iniciar Gravação</strong>. A contagem regressiva <code>3..2..1</code> dá tempo de preparar sua janela sem aparecer no vídeo gravado.
+            </p>
           </div>
-          <div class="obs-form-group">
-            <label class="obs-label" for="pipSizeSelect">Tamanho da Câmera Flutuante</label>
-            <select class="obs-select" id="pipSizeSelect">
-              <option value="12">Compacta (12%)</option>
-              <option value="16" selected>Média (16% · Padrão)</option>
-              <option value="22">Grande (22% · Destaque)</option>
-            </select>
+
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <h3>Apare e Baixe na Hora</h3>
+            <p>
+              Ao finalizar, revise no player instantâneo, apare segundos extras com o <strong>Corte Rápido</strong> e baixe em vídeo ou <code>.gif</code> direto para a sua máquina.
+            </p>
           </div>
-          <div class="obs-form-group">
-            <label class="obs-label" for="studioBgSelect">Fundo da Moldura Estúdio (Screen Studio)</label>
-            <select class="obs-select" id="studioBgSelect">
-              <option value="none" selected>Desativado (Tela Original 100%)</option>
-              <option value="ocean">Gradiente Oceano Profundo (Azul / Roxo)</option>
-              <option value="emerald">Gradiente Aurora (Esmeralda / Índigo)</option>
-              <option value="sunset">Gradiente Cyber Sunset (Coral / Violeta)</option>
-              <option value="graphite">Estúdio Grafite Escuro (Minimalista)</option>
-            </select>
-          </div>
-        </div>
-        <div class="obs-modal-footer">
-          <button class="obs-btn obs-btn-secondary" id="refreshDevicesBtn" type="button">🔄 Atualizar Lista</button>
-          <button class="obs-btn obs-btn-record" id="saveDevicesBtn" type="button">Concluído</button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Shortcuts Dialog -->
-    <div class="obs-modal-backdrop" id="shortcutsModal" hidden>
-      <div class="obs-modal-card modal-compact" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
-        <div class="obs-modal-header">
-          <span class="obs-modal-title" id="shortcutsTitle">⌨️ Atalhos de Teclado</span>
-          <button class="obs-modal-close" id="closeShortcutsModal" type="button" aria-label="Fechar">×</button>
+    <!-- Comparison Table Section -->
+    <section class="comparison-section" id="comparativo">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-eyebrow">COMPARATIVO</span>
+          <h2 class="section-title">Por que usar o Captura Studio?</h2>
+          <p class="section-desc">Compare com gravadores baseados em nuvem ou softwares pesados de desktop.</p>
         </div>
-        <div class="obs-modal-body">
-          <div class="shortcuts-grid">
-            <div class="shortcut-row"><kbd>Espaço</kbd> ou <kbd>Alt + R</kbd> <span>Iniciar / Parar Gravação</span></div>
-            <div class="shortcut-row"><kbd>Alt + P</kbd> <span>Pausar / Retomar Gravação</span></div>
-            <div class="shortcut-row"><kbd>Esc</kbd> <span>Pular contagem / Fechar janelas</span></div>
-            <div class="shortcut-row"><kbd>M</kbd> <span>Silenciar / Ativar Microfone</span></div>
-          </div>
-        </div>
-        <div class="obs-modal-footer">
-          <button class="obs-btn obs-btn-secondary" id="dismissShortcutsBtn" type="button">Entendi</button>
+
+        <div class="table-responsive">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Funcionalidade</th>
+                <th class="highlight-col">🎥 Captura Studio</th>
+                <th>Gravadores em Nuvem (Loom, etc.)</th>
+                <th>Softwares Desktop (OBS Local)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Instalação prévia</strong></td>
+                <td class="highlight-col">✅ Zero (Roda no navegador)</td>
+                <td>⚠️ Requer extensão ou app</td>
+                <td>⚠️ Instalação e configuração</td>
+              </tr>
+              <tr>
+                <td><strong>Criação de conta / Login</strong></td>
+                <td class="highlight-col">✅ Não requer</td>
+                <td>❌ Obrigatório</td>
+                <td>✅ Não requer</td>
+              </tr>
+              <tr>
+                <td><strong>Privacidade dos vídeos</strong></td>
+                <td class="highlight-col">🔒 100% no seu dispositivo</td>
+                <td>☁️ Enviado para a nuvem</td>
+                <td>🔒 100% no dispositivo</td>
+              </tr>
+              <tr>
+                <td><strong>Limite de tempo gratuito</strong></td>
+                <td class="highlight-col">♾️ Ilimitado</td>
+                <td>⏱️ ~5 min no plano grátis</td>
+                <td>♾️ Ilimitado</td>
+              </tr>
+              <tr>
+                <td><strong>Moldura Gradiente & GIF</strong></td>
+                <td class="highlight-col">✨ Nativo em 1 clique</td>
+                <td>❌ Recursos pagos / ausentes</td>
+                <td>⚠️ Exige plugins externos</td>
+              </tr>
+              <tr>
+                <td><strong>Marcas d'água</strong></td>
+                <td class="highlight-col">✅ Nenhuma</td>
+                <td>⚠️ Comum em contas gratuitas</td>
+                <td>✅ Nenhuma</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section" id="faq">
+      <div class="container faq-container">
+        <div class="section-header">
+          <span class="section-eyebrow">DÚVIDAS FREQUENTES</span>
+          <h2 class="section-title">Perguntas Frequentes</h2>
+        </div>
+
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>Meus vídeos são enviados para algum servidor?</summary>
+            <p>
+              <strong>Não.</strong> Todo o processamento de vídeo, mixagem de áudio, corte (trim) e conversão para GIF acontece <strong>100% localmente na memória do seu navegador</strong>. Nenhum dado sai do seu computador.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Quais formatos de arquivo posso baixar?</summary>
+            <p>
+              Você pode escolher entre <strong>MP4 (<code>.mp4</code>)</strong>, <strong>Matroska (<code>.mkv</code>)</strong> e <strong>WebM (<code>.webm</code>)</strong> diretamente na dock de Configurações ou no menu Arquivo, além de exportar trechos curtos como <strong>GIF animado (<code>.gif</code>)</strong>.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>E se eu fechar a aba sem querer antes de baixar?</summary>
+            <p>
+              O Captura Studio salva automaticamente suas últimas 5 gravações no banco de dados interno do seu navegador (<code>IndexedDB</code>). Basta abrir <a href="/studio"><code>/studio</code></a> e clicar em <strong>Gravações</strong> na barra superior para recuperar ou baixar novamente.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Quais são os atalhos de teclado do Studio?</summary>
+            <p>
+              Dentro de <code>/studio</code>, use <kbd>Espaço</kbd> ou <kbd>Alt + R</kbd> para iniciar/finalizar a gravação, <kbd>Alt + P</kbd> para pausar ou retomar, <kbd>Alt + M</kbd> para silenciar o microfone e <kbd>Esc</kbd> para pular a contagem regressiva.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Banner -->
+    <section class="cta-banner-section">
+      <div class="container">
+        <div class="cta-banner-box">
+          <h2>Pronto para gravar sua próxima demonstração?</h2>
+          <p>Abra o estúdio completo agora mesmo — sem cadastro, sem espera e 100% gratuito.</p>
+          <div class="hero-cta-group">
+            <a href="/studio" class="btn btn-rec btn-lg">
+              <span class="rec-dot-inline"></span>
+              Entrar no Captura Studio (/studio)
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-brand">
+        <a href="/" class="brand-logo">
+          <span class="brand-dot"></span>
+          <span class="brand-name"><strong>Captura</strong> Studio</span>
+        </a>
+        <p>Gravador de tela web minimalista, privado e open-source.</p>
+      </div>
+      <div class="footer-links">
+        <a href="/studio">Abrir Studio (/studio)</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#comparativo">Comparativo</a>
+        <a href="https://github.com/thiagofal1/captura" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
     </div>
+  </footer>
 
-    <!-- Notification Toast -->
-    <div class="obs-toast" id="toast" role="status" aria-live="polite"></div>
-
-  </div>
 </body>
 </html>
