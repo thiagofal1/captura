@@ -73,6 +73,8 @@
   const sourceSysAudioStatus = document.querySelector('#sourceSysAudioStatus');
   const sourceWebcamStatus = document.querySelector('#sourceWebcamStatus');
   const canvasWebcamToggleBtn = document.querySelector('#canvasWebcamToggleBtn');
+  const canvasStudioFrameBtn = document.querySelector('#canvasStudioFrameBtn');
+  const sourceSettingsBtn = document.querySelector('#sourceSettingsBtn');
 
   // Facecam PiP Elements
   const facecamPip = document.querySelector('#facecamPip');
@@ -96,6 +98,9 @@
   const cancelFileModalBtn = document.querySelector('#cancelFileModalBtn');
   const saveFileFormatBtn = document.querySelector('#saveFileFormatBtn');
   const menuFileBtn = document.querySelector('#menuFileBtn');
+  const menuHistoryBtn = document.querySelector('#menuHistoryBtn');
+  const historyCountBadge = document.querySelector('#historyCountBadge');
+  const menuDevicesBtn = document.querySelector('#menuDevicesBtn');
 
   // Modals & Toast
   const resultModal = document.querySelector('#resultModal');
@@ -106,6 +111,30 @@
   const modalDownloadBtn = document.querySelector('#modalDownloadBtn');
   const modalNewRecordBtn = document.querySelector('#modalNewRecordBtn');
   const closeResultModal = document.querySelector('#closeResultModal');
+
+  // Trim & GIF Elements
+  const trimStartRange = document.querySelector('#trimStartRange');
+  const trimEndRange = document.querySelector('#trimEndRange');
+  const trimRangeLabel = document.querySelector('#trimRangeLabel');
+  const applyTrimBtn = document.querySelector('#applyTrimBtn');
+  const exportGifBtn = document.querySelector('#exportGifBtn');
+
+  // History Modal Elements (IndexedDB)
+  const historyModal = document.querySelector('#historyModal');
+  const historyList = document.querySelector('#historyList');
+  const closeHistoryModal = document.querySelector('#closeHistoryModal');
+  const clearHistoryBtn = document.querySelector('#clearHistoryBtn');
+  const dismissHistoryBtn = document.querySelector('#dismissHistoryBtn');
+
+  // Devices & Studio Modal Elements
+  const devicesModal = document.querySelector('#devicesModal');
+  const closeDevicesModal = document.querySelector('#closeDevicesModal');
+  const micDeviceSelect = document.querySelector('#micDeviceSelect');
+  const camDeviceSelect = document.querySelector('#camDeviceSelect');
+  const pipSizeSelect = document.querySelector('#pipSizeSelect');
+  const studioBgSelect = document.querySelector('#studioBgSelect');
+  const refreshDevicesBtn = document.querySelector('#refreshDevicesBtn');
+  const saveDevicesBtn = document.querySelector('#saveDevicesBtn');
 
   const shortcutsModal = document.querySelector('#shortcutsModal');
   const closeShortcutsModal = document.querySelector('#closeShortcutsModal');
@@ -165,10 +194,15 @@
   let isDesktopAudioEnabled = true;
   let isMicAudioEnabled = true;
 
-  // Webcam & Compositing State
+  // Webcam, Studio Frame & Compositing State
   let webcamStream = null;
   let isWebcamActive = false;
   let isWebcamMirrored = false;
+  let selectedMicDeviceId = 'default';
+  let selectedCamDeviceId = 'default';
+  let studioBgMode = localStorage.getItem('captura-studio-bg') || 'none'; // 'none' | 'ocean' | 'emerald' | 'sunset' | 'graphite'
+  let activeRipples = []; // Click ripples [{ xRatio, yRatio, startedAt }]
+  let lastRecordingDurationSec = 10;
   let isPipDragging = false;
   let pipStartX = 0;
   let pipStartY = 0;
@@ -275,17 +309,25 @@
     }
   }
 
-  async function initMicrophoneAudio(silent = false) {
+  async function initMicrophoneAudio(silent = false, forceRestart = false) {
     try {
-      if (microphoneStream) {
+      if (microphoneStream && !forceRestart) {
         return microphoneStream;
       }
+      if (forceRestart && microphoneStream) {
+        stopTracks(microphoneStream);
+        microphoneStream = null;
+      }
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+      if (selectedMicDeviceId && selectedMicDeviceId !== 'default') {
+        audioConstraints.deviceId = { exact: selectedMicDeviceId };
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: audioConstraints,
       });
       microphoneStream = stream;
 
@@ -294,6 +336,9 @@
         audioDestination = ctx.createMediaStreamDestination();
       }
 
+      if (micSourceNode) {
+        try { micSourceNode.disconnect(); } catch (e) {}
+      }
       micSourceNode = ctx.createMediaStreamSource(microphoneStream);
       micGainNode = ctx.createGain();
       micGainNode.gain.value = isMicMuted ? 0 : parseFloat(micFader.value);
@@ -617,13 +662,11 @@
 
       startVuMeterLoop();
 
-      // 3. Assemble Mixed Stream (Composite Screen + Webcam if active)
+      // 3. Assemble Mixed Stream (Composite Screen + Webcam + Studio Frame + Click Ripples)
       let finalVideoTrack = displayStream.getVideoTracks()[0];
-      if (isWebcamActive && webcamStream && webcamVideo) {
-        startCanvasCompositing(videoTrack, selectedFps);
-        if (compositeStream && compositeStream.getVideoTracks().length > 0) {
-          finalVideoTrack = compositeStream.getVideoTracks()[0];
-        }
+      startCanvasCompositing(videoTrack, selectedFps);
+      if (compositeStream && compositeStream.getVideoTracks().length > 0) {
+        finalVideoTrack = compositeStream.getVideoTracks()[0];
       }
 
       const outputTracks = [finalVideoTrack];
@@ -744,12 +787,40 @@
     const dateStamp = new Date().toISOString().slice(0, 10);
     const fileName = `captura-${dateStamp}-${Math.floor(Math.random() * 8999 + 1000)}.${extension}`;
     
+    setupResultModalWithBlob(finalBlob, totalDuration, fileName, mimeType);
+
+    // Save automatically to Local IndexedDB History
+    saveRecordingToHistory({
+      fileName,
+      blob: finalBlob,
+      durationMs: totalDuration,
+      sizeBytes: finalBlob.size,
+      formatLabel: formatLabel(chosenFormat, mimeType),
+      mimeType,
+      createdAt: Date.now(),
+    });
+  }
+
+  function setupResultModalWithBlob(blob, durationMs, fileName, mimeType) {
+    currentVideoBlob = blob;
+    if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
+    currentVideoUrl = URL.createObjectURL(blob);
+
+    lastRecordingDurationSec = Math.max(1, Number((durationMs / 1000).toFixed(1)));
+    if (trimStartRange && trimEndRange && trimRangeLabel) {
+      trimStartRange.max = String(lastRecordingDurationSec);
+      trimEndRange.max = String(lastRecordingDurationSec);
+      trimStartRange.value = '0';
+      trimEndRange.value = String(lastRecordingDurationSec);
+      trimRangeLabel.textContent = `0.0s até ${lastRecordingDurationSec.toFixed(1)}s (Total)`;
+    }
+
     resultVideoPlayer.src = currentVideoUrl;
     modalDownloadBtn.href = currentVideoUrl;
     modalDownloadBtn.download = fileName;
-    
-    resultDurationVal.textContent = formatTime(totalDuration);
-    resultSizeVal.textContent = formatBytes(finalBlob.size);
+
+    resultDurationVal.textContent = formatTime(durationMs);
+    resultSizeVal.textContent = formatBytes(blob.size);
     resultFormatVal.textContent = formatLabel(chosenFormat, mimeType);
 
     // Enable dock download button
@@ -863,7 +934,56 @@
     });
   });
 
-  // --- Canvas Compositing (Screen + Facecam PiP) ---
+  // --- Studio Frame (Screen Studio Style) & Canvas Compositing ---
+  const studioGradientStops = {
+    ocean: ['#0f172a', '#1e3a8a', '#581c87'],
+    emerald: ['#064e3b', '#0f766e', '#1e1b4b'],
+    sunset: ['#7c2d12', '#be185d', '#3b0764'],
+    graphite: ['#18181b', '#27272a', '#09090b'],
+  };
+
+  function applyStudioBgMode(mode, notify = true) {
+    studioBgMode = mode || 'none';
+    localStorage.setItem('captura-studio-bg', studioBgMode);
+
+    previewContainer.classList.remove(
+      'studio-mode',
+      'studio-bg-ocean',
+      'studio-bg-emerald',
+      'studio-bg-sunset',
+      'studio-bg-graphite'
+    );
+
+    if (studioBgMode !== 'none' && studioGradientStops[studioBgMode]) {
+      previewContainer.classList.add('studio-mode', `studio-bg-${studioBgMode}`);
+      canvasStudioFrameBtn?.classList.add('active');
+    } else {
+      canvasStudioFrameBtn?.classList.remove('active');
+    }
+
+    if (studioBgSelect) {
+      studioBgSelect.value = studioBgMode;
+    }
+
+    if (notify) {
+      const names = {
+        none: 'Moldura Estúdio desativada (Tela 100%)',
+        ocean: 'Moldura Estúdio: Oceano Profundo',
+        emerald: 'Moldura Estúdio: Aurora Esmeralda',
+        sunset: 'Moldura Estúdio: Cyber Sunset',
+        graphite: 'Moldura Estúdio: Grafite Minimalista',
+      };
+      showToast(names[studioBgMode] || 'Moldura Estúdio atualizada', 2500);
+    }
+  }
+
+  function cycleStudioBgMode() {
+    const order = ['none', 'ocean', 'emerald', 'sunset', 'graphite'];
+    const idx = order.indexOf(studioBgMode);
+    const next = order[(idx + 1) % order.length];
+    applyStudioBgMode(next, true);
+  }
+
   function drawRoundedRect(ctx, x, y, width, height, radius) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -893,10 +1013,37 @@
     function renderComposite() {
       if (!isCompositing) return;
 
-      // 1. Draw screen video
-      compositeCtx.drawImage(previewVideo, 0, 0, w, h);
+      // 1. Draw Screen Video (with optional Studio Frame Gradient + Rounded Corners)
+      const stops = studioGradientStops[studioBgMode];
+      if (studioBgMode !== 'none' && stops) {
+        const grad = compositeCtx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, stops[0]);
+        grad.addColorStop(0.5, stops[1]);
+        grad.addColorStop(1, stops[2]);
+        compositeCtx.fillStyle = grad;
+        compositeCtx.fillRect(0, 0, w, h);
 
-      // 2. Draw webcam bubble if active
+        const padX = Math.round(w * 0.035);
+        const padY = Math.round(h * 0.035);
+        const innerW = w - padX * 2;
+        const innerH = h - padY * 2;
+        const radius = Math.round(w * 0.01);
+
+        compositeCtx.save();
+        compositeCtx.shadowColor = 'rgba(0, 0, 0, 0.72)';
+        compositeCtx.shadowBlur = Math.round(w * 0.018);
+        compositeCtx.shadowOffsetY = Math.round(h * 0.008);
+        drawRoundedRect(compositeCtx, padX, padY, innerW, innerH, radius);
+        compositeCtx.fillStyle = '#000';
+        compositeCtx.fill();
+        compositeCtx.clip();
+        compositeCtx.drawImage(previewVideo, padX, padY, innerW, innerH);
+        compositeCtx.restore();
+      } else {
+        compositeCtx.drawImage(previewVideo, 0, 0, w, h);
+      }
+
+      // 2. Draw Webcam Bubble (Facecam PiP) if active
       if (isWebcamActive && webcamVideo && webcamVideo.readyState >= 2) {
         const pipW = (pipWidthPercent / 100) * w;
         const isCircle = !facecamPip.classList.contains('is-rect');
@@ -905,7 +1052,6 @@
         const pipY = (pipTopPercent / 100) * h;
 
         compositeCtx.save();
-        // Drop Shadow
         compositeCtx.shadowColor = 'rgba(0, 0, 0, 0.65)';
         compositeCtx.shadowBlur = Math.round(w * 0.012);
         compositeCtx.shadowOffsetY = Math.round(w * 0.004);
@@ -928,7 +1074,6 @@
         compositeCtx.drawImage(webcamVideo, pipX, pipY, pipW, pipH);
         compositeCtx.restore();
 
-        // Stroke Border
         compositeCtx.save();
         compositeCtx.lineWidth = Math.max(3, Math.round(w * 0.0025));
         compositeCtx.strokeStyle = '#2f5ce8';
@@ -941,6 +1086,28 @@
           compositeCtx.stroke();
         }
         compositeCtx.restore();
+      }
+
+      // 3. Draw Active Click Ripples
+      if (activeRipples.length > 0) {
+        const now = performance.now();
+        activeRipples = activeRipples.filter((r) => now - r.startedAt < 550);
+        for (const r of activeRipples) {
+          const prog = (now - r.startedAt) / 550;
+          const radius = (0.3 + prog * 1.9) * (w * 0.014);
+          const alpha = Math.max(0, 1 - prog);
+          const rx = r.xRatio * w;
+          const ry = r.yRatio * h;
+          compositeCtx.save();
+          compositeCtx.beginPath();
+          compositeCtx.arc(rx, ry, radius, 0, Math.PI * 2);
+          compositeCtx.fillStyle = `rgba(77, 123, 255, ${(alpha * 0.25).toFixed(3)})`;
+          compositeCtx.fill();
+          compositeCtx.lineWidth = Math.max(2, Math.round(w * 0.0018));
+          compositeCtx.strokeStyle = `rgba(77, 123, 255, ${(alpha * 0.9).toFixed(3)})`;
+          compositeCtx.stroke();
+          compositeCtx.restore();
+        }
       }
 
       compositeAnimId = requestAnimationFrame(renderComposite);
@@ -962,18 +1129,50 @@
     }
   }
 
+  // Click Ripple on Preview Area
+  if (previewContainer) {
+    previewContainer.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.facecam-pip') || e.target.closest('button')) return;
+      const rect = previewContainer.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      activeRipples.push({
+        xRatio: x / rect.width,
+        yRatio: y / rect.height,
+        startedAt: performance.now(),
+      });
+
+      const dot = document.createElement('span');
+      dot.className = 'click-ripple';
+      dot.style.left = `${x}px`;
+      dot.style.top = `${y}px`;
+      previewContainer.appendChild(dot);
+      setTimeout(() => dot.remove(), 560);
+    });
+  }
+
   // --- Webcam / Facecam PiP Handlers ---
-  async function toggleWebcam(forceState) {
+  async function toggleWebcam(forceState, forceRestart = false) {
     const shouldEnable = forceState !== undefined ? forceState : !isWebcamActive;
     if (shouldEnable) {
       try {
+        if (forceRestart && webcamStream) {
+          stopTracks(webcamStream);
+          webcamStream = null;
+        }
         if (!webcamStream) {
+          const videoConstraints = {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user',
+          };
+          if (selectedCamDeviceId && selectedCamDeviceId !== 'default') {
+            videoConstraints.deviceId = { exact: selectedCamDeviceId };
+          }
           webcamStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-              facingMode: 'user',
-            },
+            video: videoConstraints,
           });
         }
         webcamVideo.srcObject = webcamStream;
@@ -987,16 +1186,20 @@
         sourceWebcamStatus.style.color = '#38d39f';
         if (webcamEyeIcon) webcamEyeIcon.textContent = '👁';
 
+        // Apply selected PiP width
+        applyPipSizePercent(pipWidthPercent);
+
         // Measure initial position percentage
         const rect = facecamPip.getBoundingClientRect();
         const parentRect = previewContainer.getBoundingClientRect();
         if (parentRect.width > 0) {
           pipLeftPercent = Math.max(0, Math.min(100, ((rect.left - parentRect.left) / parentRect.width) * 100));
           pipTopPercent = Math.max(0, Math.min(100, ((rect.top - parentRect.top) / parentRect.height) * 100));
-          pipWidthPercent = Math.max(5, Math.min(50, (facecamPip.offsetWidth / parentRect.width) * 100));
         }
 
-        showToast('Webcam ativada! Arraste a câmera livremente para qualquer lugar da tela.', 3500);
+        if (!forceRestart) {
+          showToast('Webcam ativada! Arraste a câmera livremente para qualquer lugar da tela.', 3500);
+        }
       } catch (err) {
         console.warn('Erro ao acessar webcam:', err);
         showToast('Não foi possível acessar a webcam. Verifique a permissão de câmera no navegador.');
@@ -1005,6 +1208,13 @@
     } else {
       stopWebcam();
       showToast('Webcam desativada.');
+    }
+  }
+
+  function applyPipSizePercent(pct) {
+    pipWidthPercent = Math.max(8, Math.min(35, Number(pct) || 16));
+    if (facecamPip) {
+      facecamPip.style.width = `${pipWidthPercent}%`;
     }
   }
 
@@ -1101,6 +1311,36 @@
     statusFpsMetric.innerHTML = `FPS: <strong>${fpsSelect.value}.00</strong>`;
   }
 
+  // --- Format Selection & Persistence ---
+  function applyChosenFormat(newFmt, notify = false) {
+    const mime = getSupportedMimeType(newFmt);
+    if (!mime) {
+      const labels = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
+      if (notify) {
+        showToast(`⚠️ Seu navegador não suporta gravação nativa em ${labels[newFmt]}. Mantendo ${chosenFormat.toUpperCase()}.`, 4500);
+      }
+      if (formatSelect) formatSelect.value = chosenFormat;
+      return false;
+    }
+    chosenFormat = newFmt;
+    resolvedMimeType = mime;
+    localStorage.setItem('captura-format', chosenFormat);
+    if (formatSelect) formatSelect.value = chosenFormat;
+    syncFormatBadge();
+    if (notify) {
+      const labels = { mp4: 'MP4 (.mp4)', mkv: 'MKV (.mkv)', webm: 'WebM (.webm)' };
+      showToast(`Formato de gravação definido: ${labels[chosenFormat]}`, 2800);
+    }
+    return true;
+  }
+
+  function initFormatPreference() {
+    const savedFmt = localStorage.getItem('captura-format') || 'webm';
+    if (!applyChosenFormat(savedFmt, false)) {
+      applyChosenFormat('webm', false);
+    }
+  }
+
   // --- Event Listeners ---
   recordButton.addEventListener('click', initiateRecordingFlow);
   pauseButton.addEventListener('click', togglePause);
@@ -1121,25 +1361,20 @@
   qualitySelect.addEventListener('change', updateQualityBadge);
   fpsSelect.addEventListener('change', updateQualityBadge);
 
-  // formatSelect in Settings dock (live preview only — does not commit until Arquivo modal Save)
+  if (canvasStudioFrameBtn) {
+    canvasStudioFrameBtn.addEventListener('click', cycleStudioBgMode);
+  }
+
+  // formatSelect in Settings dock commits directly and syncs with Arquivo modal
   if (formatSelect) {
     formatSelect.addEventListener('change', () => {
-      // Preview the selected format in the badge, but do not commit yet
-      const previewFmt = formatSelect.value;
-      const previewMime = getSupportedMimeType(previewFmt);
-      const supported = previewMime !== '' || previewFmt === 'mp4'; // mp4 may not report via isTypeSupported on all browsers
-      if (currentFormatBadge) {
-        currentFormatBadge.textContent = supported
-          ? formatLabel(previewFmt, previewMime)
-          : `${previewFmt.toUpperCase()} · Não suportado neste navegador`;
-      }
+      applyChosenFormat(formatSelect.value, true);
     });
   }
 
   // --- File / Format Modal ---
   function openFileModal() {
     if (!fileModal) return;
-    // Sync radio buttons to current chosenFormat
     const radio = fileModal.querySelector(`input[value="${chosenFormat}"]`);
     if (radio) radio.checked = true;
     fileModal.hidden = false;
@@ -1156,37 +1391,540 @@
     saveFileFormatBtn.addEventListener('click', () => {
       const checked = fileModal.querySelector('input[name="modalOutputFormat"]:checked');
       if (!checked) { closeFileModalFn(); return; }
-
-      const newFmt = checked.value;
-      const mime   = getSupportedMimeType(newFmt);
-
-      // Warn if the browser can't actually record in the chosen format
-      if (!mime) {
-        const labels = { mp4: 'MP4', mkv: 'MKV', webm: 'WebM' };
-        showToast(
-          `⚠️ Seu navegador não suporta gravação em ${labels[newFmt]}. Tente MP4 ou WebM.`,
-          5000
-        );
-        return;
+      if (applyChosenFormat(checked.value, true)) {
+        closeFileModalFn();
       }
-
-      chosenFormat     = newFmt;
-      resolvedMimeType = mime;
-
-      // Sync the Settings dock select & badge
-      if (formatSelect) formatSelect.value = chosenFormat;
-      syncFormatBadge();
-
-      const labels = { mp4: 'MP4 (.mp4)', mkv: 'MKV (.mkv)', webm: 'WebM (.webm)' };
-      showToast(`Formato salvo: ${labels[chosenFormat]}`, 3000);
-      closeFileModalFn();
     });
   }
 
-  // Close File modal on backdrop click
   if (fileModal) {
     fileModal.addEventListener('click', (e) => {
       if (e.target === fileModal) closeFileModalFn();
+    });
+  }
+
+  // --- Devices & Studio Modal ---
+  async function populateDeviceLists(requestPermissionFirst = false) {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      if (requestPermissionFirst) {
+        try {
+          const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+          stopTracks(tempStream);
+        } catch (e) {}
+      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices.filter((d) => d.kind === 'audioinput');
+      const cams = devices.filter((d) => d.kind === 'videoinput');
+
+      if (micDeviceSelect) {
+        micDeviceSelect.innerHTML = '<option value="default">Padrão do Sistema</option>';
+        mics.forEach((m, i) => {
+          if (!m.deviceId || m.deviceId === 'default') return;
+          const opt = document.createElement('option');
+          opt.value = m.deviceId;
+          opt.textContent = m.label || `Microfone ${i + 1}`;
+          micDeviceSelect.appendChild(opt);
+        });
+        micDeviceSelect.value = selectedMicDeviceId;
+      }
+
+      if (camDeviceSelect) {
+        camDeviceSelect.innerHTML = '<option value="default">Padrão do Sistema</option>';
+        cams.forEach((c, i) => {
+          if (!c.deviceId || c.deviceId === 'default') return;
+          const opt = document.createElement('option');
+          opt.value = c.deviceId;
+          opt.textContent = c.label || `Câmera ${i + 1}`;
+          camDeviceSelect.appendChild(opt);
+        });
+        camDeviceSelect.value = selectedCamDeviceId;
+      }
+    } catch (err) {
+      console.warn('Não foi possível listar dispositivos:', err);
+    }
+  }
+
+  function openDevicesModal() {
+    if (!devicesModal) return;
+    populateDeviceLists(false);
+    if (studioBgSelect) studioBgSelect.value = studioBgMode;
+    devicesModal.hidden = false;
+  }
+
+  function closeDevicesModalFn() {
+    if (devicesModal) devicesModal.hidden = true;
+  }
+
+  if (menuDevicesBtn)    menuDevicesBtn.addEventListener('click', openDevicesModal);
+  if (sourceSettingsBtn) sourceSettingsBtn.addEventListener('click', openDevicesModal);
+  if (closeDevicesModal) closeDevicesModal.addEventListener('click', closeDevicesModalFn);
+  if (refreshDevicesBtn) refreshDevicesBtn.addEventListener('click', () => populateDeviceLists(true));
+
+  if (saveDevicesBtn) {
+    saveDevicesBtn.addEventListener('click', async () => {
+      const newMic = micDeviceSelect?.value || 'default';
+      const newCam = camDeviceSelect?.value || 'default';
+      const newSize = pipSizeSelect?.value || '16';
+      const newStudioBg = studioBgSelect?.value || 'none';
+
+      const micChanged = newMic !== selectedMicDeviceId;
+      const camChanged = newCam !== selectedCamDeviceId;
+
+      selectedMicDeviceId = newMic;
+      selectedCamDeviceId = newCam;
+
+      applyPipSizePercent(newSize);
+      applyStudioBgMode(newStudioBg, false);
+
+      if (micChanged && microphoneStream) {
+        await initMicrophoneAudio(true, true);
+      }
+      if (camChanged && isWebcamActive) {
+        await toggleWebcam(true, true);
+      }
+
+      closeDevicesModalFn();
+      showToast('Configurações de dispositivos e estúdio aplicadas!');
+    });
+  }
+
+  if (devicesModal) {
+    devicesModal.addEventListener('click', (e) => {
+      if (e.target === devicesModal) closeDevicesModalFn();
+    });
+  }
+
+  // --- IndexedDB Local Recordings History ---
+  const DB_NAME = 'captura_studio_db';
+  const DB_STORE = 'recordings';
+  const MAX_HISTORY_ITEMS = 5;
+
+  function openHistoryDb() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('IndexedDB indisponível'));
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(DB_STORE)) {
+          db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function saveRecordingToHistory(entry) {
+    try {
+      const db = await openHistoryDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        const store = tx.objectStore(DB_STORE);
+        store.add(entry);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+
+      // Keep only the latest MAX_HISTORY_ITEMS
+      const items = await getAllHistoryItems();
+      if (items.length > MAX_HISTORY_ITEMS) {
+        const toDelete = items.slice(0, items.length - MAX_HISTORY_ITEMS);
+        const txDel = db.transaction(DB_STORE, 'readwrite');
+        const storeDel = txDel.objectStore(DB_STORE);
+        toDelete.forEach((item) => storeDel.delete(item.id));
+      }
+      await refreshHistoryBadge();
+    } catch (err) {
+      console.warn('Aviso ao salvar no histórico IndexedDB:', err);
+    }
+  }
+
+  async function getAllHistoryItems() {
+    try {
+      const db = await openHistoryDb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const store = tx.objectStore(DB_STORE);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch {
+      return [];
+    }
+  }
+
+  async function refreshHistoryBadge() {
+    const items = await getAllHistoryItems();
+    if (historyCountBadge) {
+      historyCountBadge.textContent = String(items.length);
+      historyCountBadge.hidden = items.length === 0;
+    }
+    return items;
+  }
+
+  async function renderHistoryModalList() {
+    if (!historyList) return;
+    const items = (await refreshHistoryBadge()).slice().reverse();
+    if (items.length === 0) {
+      historyList.innerHTML = '<div class="history-empty">Nenhuma gravação recente salva neste navegador.</div>';
+      return;
+    }
+
+    historyList.innerHTML = '';
+    for (const item of items) {
+      const row = document.createElement('div');
+      row.className = 'history-item';
+      const dateStr = new Date(item.createdAt).toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      });
+      row.innerHTML = `
+        <div class="history-meta">
+          <span class="history-title">${item.fileName}</span>
+          <span class="history-sub">${dateStr} · ${formatTime(item.durationMs)} · ${formatBytes(item.sizeBytes)} · ${item.formatLabel || 'Vídeo'}</span>
+        </div>
+        <div class="history-actions">
+          <button class="obs-btn obs-btn-secondary btn-hist-open" type="button" title="Abrir no Player">▶ Rever</button>
+          <button class="obs-btn obs-btn-download btn-hist-dl" type="button" title="Baixar Arquivo">⬇ Baixar</button>
+          <button class="obs-btn obs-btn-secondary btn-hist-del" type="button" title="Excluir">🗑️</button>
+        </div>
+      `;
+
+      row.querySelector('.btn-hist-open').addEventListener('click', () => {
+        historyModal.hidden = true;
+        setupResultModalWithBlob(item.blob, item.durationMs, item.fileName, item.mimeType || 'video/webm');
+      });
+
+      row.querySelector('.btn-hist-dl').addEventListener('click', () => {
+        const url = URL.createObjectURL(item.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.fileName;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      });
+
+      row.querySelector('.btn-hist-del').addEventListener('click', async () => {
+        const db = await openHistoryDb();
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).delete(item.id);
+        tx.oncomplete = () => renderHistoryModalList();
+      });
+
+      historyList.appendChild(row);
+    }
+  }
+
+  function openHistoryModal() {
+    if (!historyModal) return;
+    renderHistoryModalList();
+    historyModal.hidden = false;
+  }
+  function closeHistoryModalFn() {
+    if (historyModal) historyModal.hidden = true;
+  }
+
+  if (menuHistoryBtn)     menuHistoryBtn.addEventListener('click', openHistoryModal);
+  if (closeHistoryModal)  closeHistoryModal.addEventListener('click', closeHistoryModalFn);
+  if (dismissHistoryBtn)  dismissHistoryBtn.addEventListener('click', closeHistoryModalFn);
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', async () => {
+      try {
+        const db = await openHistoryDb();
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).clear();
+        tx.oncomplete = () => {
+          renderHistoryModalList();
+          showToast('Histórico local limpo.');
+        };
+      } catch {}
+    });
+  }
+  if (historyModal) {
+    historyModal.addEventListener('click', (e) => {
+      if (e.target === historyModal) closeHistoryModalFn();
+    });
+  }
+
+  // --- Quick Trim (Corte de Início e Fim) & GIF Exporter ---
+  function updateTrimLabels() {
+    if (!trimStartRange || !trimEndRange || !trimRangeLabel) return;
+    let s = parseFloat(trimStartRange.value) || 0;
+    let e = parseFloat(trimEndRange.value) || lastRecordingDurationSec;
+    if (s >= e - 0.5) {
+      s = Math.max(0, e - 0.5);
+      trimStartRange.value = String(s);
+    }
+    trimRangeLabel.textContent = `${s.toFixed(1)}s até ${e.toFixed(1)}s (${(e - s).toFixed(1)}s)`;
+    if (resultVideoPlayer && !resultVideoPlayer.paused) {
+      resultVideoPlayer.pause();
+    }
+    if (resultVideoPlayer) {
+      resultVideoPlayer.currentTime = s;
+    }
+  }
+
+  if (trimStartRange) trimStartRange.addEventListener('input', updateTrimLabels);
+  if (trimEndRange)   trimEndRange.addEventListener('input', updateTrimLabels);
+
+  if (applyTrimBtn) {
+    applyTrimBtn.addEventListener('click', async () => {
+      if (!currentVideoBlob) return;
+      const startSec = parseFloat(trimStartRange.value) || 0;
+      const endSec = parseFloat(trimEndRange.value) || lastRecordingDurationSec;
+      const clipDurationSec = endSec - startSec;
+
+      if (clipDurationSec <= 0.3 || (startSec === 0 && Math.abs(endSec - lastRecordingDurationSec) < 0.2)) {
+        showToast('Ajuste as barras de Início ou Fim para cortar um trecho.');
+        return;
+      }
+
+      applyTrimBtn.disabled = true;
+      applyTrimBtn.textContent = '⏳ Cortando...';
+      showToast(`Cortando vídeo de ${startSec.toFixed(1)}s até ${endSec.toFixed(1)}s...`, 4000);
+
+      try {
+        const tempVideo = document.createElement('video');
+        tempVideo.src = URL.createObjectURL(currentVideoBlob);
+        tempVideo.muted = false;
+        tempVideo.playsInline = true;
+        await new Promise((r) => { tempVideo.onloadedmetadata = r; });
+
+        tempVideo.currentTime = startSec;
+        await new Promise((r) => { tempVideo.onseeked = r; });
+
+        const stream = tempVideo.captureStream ? tempVideo.captureStream() : tempVideo.mozCaptureStream();
+        const mime = getSupportedMimeType(chosenFormat) || 'video/webm';
+        const chunks = [];
+        const trimRec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+        trimRec.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunks.push(ev.data); };
+
+        const stoppedPromise = new Promise((r) => { trimRec.onstop = r; });
+        trimRec.start(200);
+        await tempVideo.play();
+
+        await new Promise((resolve) => {
+          const checkTime = () => {
+            if (tempVideo.currentTime >= endSec || tempVideo.ended) {
+              tempVideo.pause();
+              resolve();
+            } else {
+              requestAnimationFrame(checkTime);
+            }
+          };
+          requestAnimationFrame(checkTime);
+        });
+
+        trimRec.stop();
+        await stoppedPromise;
+        URL.revokeObjectURL(tempVideo.src);
+
+        const durationMs = Math.round(clipDurationSec * 1000);
+        let trimmedBlob = new Blob(chunks, { type: mime });
+        if (mime.includes('webm') && typeof window.ysFixWebmDuration === 'function') {
+          try {
+            trimmedBlob = await window.ysFixWebmDuration(trimmedBlob, durationMs);
+          } catch {}
+        }
+
+        const ext = extensionFromMime(mime);
+        const trimmedName = `captura-cortado-${Math.floor(Math.random() * 8999 + 1000)}.${ext}`;
+        setupResultModalWithBlob(trimmedBlob, durationMs, trimmedName, mime);
+        showToast('Trecho cortado com sucesso!');
+      } catch (err) {
+        console.error('Erro ao cortar trecho:', err);
+        showToast('Não foi possível cortar o vídeo neste navegador.');
+      } finally {
+        applyTrimBtn.disabled = false;
+        applyTrimBtn.textContent = '✂️ Cortar Trecho';
+      }
+    });
+  }
+
+  // Minimal Pure-JS Animated GIF89a Encoder (3-3-2 RGB 256-color palette + LZW)
+  function encodeAnimatedGif(frames, width, height, delayCs) {
+    const out = [];
+    const writeByte = (b) => out.push(b & 0xff);
+    const writeShort = (s) => { out.push(s & 0xff, (s >> 8) & 0xff); };
+    const writeStr = (str) => { for (let i = 0; i < str.length; i++) out.push(str.charCodeAt(i)); };
+
+    // Header GIF89a + Logical Screen Descriptor (Global Color Table 256 colors)
+    writeStr('GIF89a');
+    writeShort(width);
+    writeShort(height);
+    writeByte(0xf7); // GCT=1, 8-bit color, 256 entries
+    writeByte(0);
+    writeByte(0);
+
+    // 3-3-2 RGB Global Palette (256 entries)
+    for (let i = 0; i < 256; i++) {
+      const r = Math.round(((i >> 5) & 0x07) * (255 / 7));
+      const g = Math.round(((i >> 2) & 0x07) * (255 / 7));
+      const b = Math.round((i & 0x03) * (255 / 3));
+      writeByte(r);
+      writeByte(g);
+      writeByte(b);
+    }
+
+    // Netscape 2.0 Application Extension for infinite looping
+    writeByte(0x21); writeByte(0xff); writeByte(11);
+    writeStr('NETSCAPE2.0');
+    writeByte(3); writeByte(1); writeShort(0); writeByte(0);
+
+    // LZW Encoder for 8-bit indexed pixels
+    function writeLzwFrame(indexedPixels) {
+      const minCodeSize = 8;
+      writeByte(minCodeSize);
+
+      const clearCode = 256;
+      const eoiCode = 257;
+      let nextCode = 258;
+      let codeSize = 9;
+
+      let bitBuf = 0;
+      let bitCount = 0;
+      const subBlock = [];
+
+      const flushSubBlock = () => {
+        if (subBlock.length > 0) {
+          writeByte(subBlock.length);
+          for (let i = 0; i < subBlock.length; i++) writeByte(subBlock[i]);
+          subBlock.length = 0;
+        }
+      };
+
+      const emitCode = (code) => {
+        bitBuf |= code << bitCount;
+        bitCount += codeSize;
+        while (bitCount >= 8) {
+          subBlock.push(bitBuf & 0xff);
+          if (subBlock.length === 255) flushSubBlock();
+          bitBuf >>= 8;
+          bitCount -= 8;
+        }
+      };
+
+      let dict = new Map();
+      emitCode(clearCode);
+
+      let prefix = indexedPixels[0];
+      for (let i = 1; i < indexedPixels.length; i++) {
+        const k = indexedPixels[i];
+        const key = (prefix << 8) | k;
+        const found = dict.get(key);
+        if (found !== undefined) {
+          prefix = found;
+        } else {
+          emitCode(prefix);
+          if (nextCode < 4096) {
+            dict.set(key, nextCode++);
+            if (nextCode > (1 << codeSize) && codeSize < 12) {
+              codeSize++;
+            }
+          } else {
+            emitCode(clearCode);
+            dict.clear();
+            nextCode = 258;
+            codeSize = 9;
+          }
+          prefix = k;
+        }
+      }
+
+      emitCode(prefix);
+      emitCode(eoiCode);
+      if (bitCount > 0) {
+        subBlock.push(bitBuf & 0xff);
+      }
+      flushSubBlock();
+      writeByte(0); // Block terminator
+    }
+
+    for (const rgba of frames) {
+      // Graphic Control Extension
+      writeByte(0x21); writeByte(0xf9); writeByte(4);
+      writeByte(0x00);
+      writeShort(delayCs);
+      writeByte(0);
+      writeByte(0);
+
+      // Image Descriptor
+      writeByte(0x2c);
+      writeShort(0);
+      writeShort(0);
+      writeShort(width);
+      writeShort(height);
+      writeByte(0x00);
+
+      // Map RGBA to 3-3-2 palette index
+      const totalPixels = width * height;
+      const indexed = new Uint8Array(totalPixels);
+      for (let p = 0, j = 0; p < totalPixels; p++, j += 4) {
+        const r = (rgba[j] >> 5) & 0x07;
+        const g = (rgba[j + 1] >> 5) & 0x07;
+        const b = (rgba[j + 2] >> 6) & 0x03;
+        indexed[p] = (r << 5) | (g << 2) | b;
+      }
+      writeLzwFrame(indexed);
+    }
+
+    writeByte(0x3b); // GIF Trailer
+    return new Blob([new Uint8Array(out)], { type: 'image/gif' });
+  }
+
+  if (exportGifBtn) {
+    exportGifBtn.addEventListener('click', async () => {
+      if (!currentVideoBlob) return;
+      const startSec = parseFloat(trimStartRange?.value) || 0;
+      const endSec = parseFloat(trimEndRange?.value) || lastRecordingDurationSec;
+      const maxGifSeconds = Math.min(12, Math.max(0.8, endSec - startSec));
+
+      exportGifBtn.disabled = true;
+      exportGifBtn.textContent = '⏳ Gerando GIF...';
+      showToast(`Convertendo ${maxGifSeconds.toFixed(1)}s para GIF animado...`, 4000);
+
+      try {
+        const v = document.createElement('video');
+        v.src = URL.createObjectURL(currentVideoBlob);
+        v.muted = true;
+        v.playsInline = true;
+        await new Promise((r) => { v.onloadedmetadata = r; });
+
+        const fps = 10;
+        const gifW = 480;
+        const gifH = Math.max(200, Math.round((v.videoHeight / (v.videoWidth || 16)) * gifW) || 270);
+        const cv = document.createElement('canvas');
+        cv.width = gifW;
+        cv.height = gifH;
+        const cx = cv.getContext('2d', { willReadFrequently: true });
+
+        const frames = [];
+        const totalFrames = Math.max(2, Math.floor(maxGifSeconds * fps));
+        for (let i = 0; i < totalFrames; i++) {
+          v.currentTime = startSec + i / fps;
+          await new Promise((r) => { v.onseeked = r; });
+          cx.drawImage(v, 0, 0, gifW, gifH);
+          frames.push(cx.getImageData(0, 0, gifW, gifH).data);
+        }
+        URL.revokeObjectURL(v.src);
+
+        const gifBlob = encodeAnimatedGif(frames, gifW, gifH, Math.round(100 / fps));
+        const gifUrl = URL.createObjectURL(gifBlob);
+        const a = document.createElement('a');
+        a.href = gifUrl;
+        a.download = `captura-${Date.now()}.gif`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(gifUrl), 8000);
+        showToast(`GIF gerado com sucesso (${formatBytes(gifBlob.size)})!`);
+      } catch (err) {
+        console.error('Erro ao exportar GIF:', err);
+        showToast('Não foi possível converter para GIF.');
+      } finally {
+        exportGifBtn.disabled = false;
+        exportGifBtn.textContent = '🎞️ Baixar como GIF (.gif)';
+      }
     });
   }
 
@@ -1212,12 +1950,10 @@
 
   // Global Keyboard Shortcuts
   window.addEventListener('keydown', (e) => {
-    // Avoid triggering when user is interacting with an input or select
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
       return;
     }
 
-    // Space: Start / Stop or Skip countdown
     if (e.code === 'Space') {
       e.preventDefault();
       if (isCountingDown) {
@@ -1227,25 +1963,21 @@
       }
     }
 
-    // Alt + R: Record / Stop
     if (e.altKey && (e.code === 'KeyR' || e.key === 'r' || e.key === 'R')) {
       e.preventDefault();
       initiateRecordingFlow();
     }
 
-    // Alt + P: Pause / Resume
     if (e.altKey && (e.code === 'KeyP' || e.key === 'p' || e.key === 'P')) {
       e.preventDefault();
       togglePause();
     }
 
-    // M: Toggle Mic
     if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       toggleMicMute();
     }
 
-    // Escape: Dismiss Modal or Skip
     if (e.code === 'Escape') {
       if (isCountingDown) {
         cancelOrSkipCountdown();
@@ -1254,6 +1986,12 @@
         resultVideoPlayer.pause();
       } else if (!shortcutsModal.hidden) {
         closeShortcuts();
+      } else if (historyModal && !historyModal.hidden) {
+        closeHistoryModalFn();
+      } else if (devicesModal && !devicesModal.hidden) {
+        closeDevicesModalFn();
+      } else if (fileModal && !fileModal.hidden) {
+        closeFileModalFn();
       }
     }
   });
@@ -1261,7 +1999,6 @@
   // --- Theme (Light / Dark) Toggle Logic ---
   function initTheme() {
     const savedTheme = localStorage.getItem('captura-theme');
-    // Default to dark mode (OBS default) unless user specifically chose light
     const isLight = savedTheme === 'light';
 
     if (isLight) {
@@ -1349,9 +2086,17 @@
     if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   });
 
+  // Register PWA Service Worker
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
   // Initializations
   initTheme();
+  initFormatPreference();
+  applyStudioBgMode(studioBgMode, false);
   setupFacecamDragging();
   updateQualityBadge();
+  refreshHistoryBadge();
 
 })();

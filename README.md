@@ -27,7 +27,14 @@ Enquanto muitas soluções do mercado exigem contas obrigatórias, enviam seus v
 - 📷 **Câmera Flutuante Arrastável (Facecam PiP):**
   - Câmera redonda ou retangular sobreposta que você pode **arrastar livremente com o mouse ou toque** para qualquer lugar da tela.
   - Composição em tempo real no vídeo gravado: a câmera se move no vídeo exatamente para onde você a arrastou.
-  - Opções de espelhamento (flip horizontal), alternância de formato (círculo / retângulo) e Picture-in-Picture nativo.
+  - Opções de espelhamento (flip horizontal), alternância de formato (círculo / retângulo), escolha de tamanho (12%, 16%, 22%) e Picture-in-Picture nativo.
+- ✨ **Moldura Estúdio (Estilo Screen Studio):** Com 1 clique no botão `✨ Moldura Estúdio`, envolva sua gravação em um fundo gradiente elegante (`Oceano`, `Aurora Esmeralda`, `Cyber Sunset` ou `Grafite`) com cantos arredondados e sombra 3D projetada em tempo real.
+- 📁 **Múltiplos Formatos (`MP4`, `MKV` e `WebM`) & Corte Rápido (Trim + GIF):**
+  - Escolha entre `.mp4`, `.mkv` ou `.webm` pelo menu `Arquivo` ou direto no dock `Configurações`.
+  - No modal pós-gravação, apare segundos iniciais/finais (**Corte Rápido**) ou baixe como **GIF animado (`.gif`)** com 1 clique.
+- 🗂️ **Histórico Local de Gravações (`IndexedDB`) & PWA Offline:**
+  - Suas últimas gravações ficam salvas automaticamente na aba `Gravações` do próprio navegador para evitar perdas acidentais.
+  - Instalável como aplicativo Desktop via **PWA** (`manifest.json` + `sw.js`).
 - ⏱️ **Contagem Regressiva (3..2..1...):** Overlay com animação antes do início real da gravação, dando tempo para você alternar para a janela desejada (com atalho para pular com `Espaço`).
 - 🎚️ **Mixer de Áudio Profissional & VU Meters:**
   - Barras animadas de decibéis em tempo real (-50 dB a 0 dB) para Áudio do Desktop e Microfone.

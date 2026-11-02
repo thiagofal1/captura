@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#161720">
   <title>Captura Studio — Gravador de Tela Web</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
   <script src="fix-webm-duration.js"></script>
   <script src="script.js" defer></script>
@@ -20,6 +21,8 @@
           <strong>Captura</strong> Studio
         </span>
         <button class="menu-btn" id="menuFileBtn" type="button">Arquivo</button>
+        <button class="menu-btn" id="menuHistoryBtn" type="button">Gravações <span class="menu-count-badge" id="historyCountBadge" hidden>0</span></button>
+        <button class="menu-btn" id="menuDevicesBtn" type="button">Dispositivos</button>
         <button class="menu-btn" id="menuShortcutsBtn" type="button">Atalhos</button>
         <button class="menu-btn" id="menuAudioBtn" type="button">Testar Áudio</button>
         <button class="menu-btn" id="menuHelpBtn" type="button">Ajuda</button>
@@ -93,6 +96,9 @@
             <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
           </div>
           <div class="canvas-toolbar-right">
+            <button class="canvas-action-btn" id="canvasStudioFrameBtn" type="button" title="Ativar/Desativar Moldura Estúdio (Gradiente + Cantos Arredondados)">
+              <span class="cam-icon">✨</span> Moldura Estúdio
+            </button>
             <button class="canvas-action-btn" id="canvasWebcamToggleBtn" type="button" title="Ligar/Desligar Câmera Flutuante">
               <span class="cam-icon">📷</span> Câmera (PiP)
             </button>
@@ -188,7 +194,7 @@
             </div>
           </div>
           <div class="dock-bottom-bar">
-            <button class="dock-mini-btn" title="Configurações de Fontes" type="button">⚙</button>
+            <button class="dock-mini-btn" id="sourceSettingsBtn" title="Selecionar Microfone, Webcam e Estilo da Câmera" type="button">⚙</button>
             <span class="dock-mini-info">Fontes nativas</span>
           </div>
         </div>
@@ -460,7 +466,28 @@
             </div>
             <div class="meta-card">
               <span class="meta-label">Armazenamento</span>
-              <strong class="meta-val" style="color: #4ade80;">100% Local</strong>
+              <strong class="meta-val" style="color: #4ade80;">100% Local (Salvo no Histórico)</strong>
+            </div>
+          </div>
+
+          <!-- Quick Trim / Cut & GIF Export Bar -->
+          <div class="trim-bar-box" id="trimBarBox">
+            <div class="trim-bar-header">
+              <span class="trim-title">✂️ Corte Rápido (Início / Fim)</span>
+              <span class="trim-range-label" id="trimRangeLabel">Vídeo inteiro</span>
+            </div>
+            <div class="trim-sliders-row">
+              <div class="trim-input-group">
+                <label for="trimStartRange">Início (s)</label>
+                <input type="range" class="obs-fader" id="trimStartRange" min="0" max="10" step="0.1" value="0">
+              </div>
+              <div class="trim-input-group">
+                <label for="trimEndRange">Fim (s)</label>
+                <input type="range" class="obs-fader" id="trimEndRange" min="0" max="10" step="0.1" value="10">
+              </div>
+              <button class="obs-btn obs-btn-secondary" id="applyTrimBtn" type="button" title="Cortar trecho selecionado">
+                ✂️ Cortar Trecho
+              </button>
             </div>
           </div>
         </div>
@@ -468,9 +495,80 @@
           <a class="obs-btn obs-btn-record" id="modalDownloadBtn" href="#" download="gravacao-captura.webm">
             ⬇ Baixar Vídeo Agora
           </a>
+          <button class="obs-btn obs-btn-download" id="exportGifBtn" type="button" title="Converter trecho para GIF animado (ideal para GitHub, Slack e Discord)">
+            🎞️ Baixar como GIF (.gif)
+          </button>
           <button class="obs-btn obs-btn-secondary" id="modalNewRecordBtn" type="button">
             Nova Gravação
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Local Recordings History Modal (IndexedDB) -->
+    <div class="obs-modal-backdrop" id="historyModal" hidden>
+      <div class="obs-modal-card" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <div class="obs-modal-header">
+          <span class="obs-modal-title" id="historyModalTitle">🗂️ Gravações Recentes (Salvas no Navegador)</span>
+          <button class="obs-modal-close" id="closeHistoryModal" type="button" aria-label="Fechar">×</button>
+        </div>
+        <div class="obs-modal-body">
+          <p class="format-modal-desc">
+            Suas últimas gravações ficam salvas temporariamente na memória local deste navegador (IndexedDB) para evitar perdas caso feche a aba por acidente.
+          </p>
+          <div class="history-list" id="historyList">
+            <div class="history-empty">Nenhuma gravação recente salva ainda.</div>
+          </div>
+        </div>
+        <div class="obs-modal-footer">
+          <button class="obs-btn obs-btn-secondary" id="clearHistoryBtn" type="button">🗑️ Limpar Histórico</button>
+          <button class="obs-btn obs-btn-record" id="dismissHistoryBtn" type="button">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Devices & Facecam Settings Modal -->
+    <div class="obs-modal-backdrop" id="devicesModal" hidden>
+      <div class="obs-modal-card modal-compact" role="dialog" aria-modal="true" aria-labelledby="devicesModalTitle">
+        <div class="obs-modal-header">
+          <span class="obs-modal-title" id="devicesModalTitle">🎛️ Dispositivos de Áudio, Câmera & Estúdio</span>
+          <button class="obs-modal-close" id="closeDevicesModal" type="button" aria-label="Fechar">×</button>
+        </div>
+        <div class="obs-modal-body">
+          <div class="obs-form-group">
+            <label class="obs-label" for="micDeviceSelect">Microfone de Entrada</label>
+            <select class="obs-select" id="micDeviceSelect">
+              <option value="default">Padrão do Sistema</option>
+            </select>
+          </div>
+          <div class="obs-form-group">
+            <label class="obs-label" for="camDeviceSelect">Câmera (Webcam PiP)</label>
+            <select class="obs-select" id="camDeviceSelect">
+              <option value="default">Padrão do Sistema</option>
+            </select>
+          </div>
+          <div class="obs-form-group">
+            <label class="obs-label" for="pipSizeSelect">Tamanho da Câmera Flutuante</label>
+            <select class="obs-select" id="pipSizeSelect">
+              <option value="12">Compacta (12%)</option>
+              <option value="16" selected>Média (16% · Padrão)</option>
+              <option value="22">Grande (22% · Destaque)</option>
+            </select>
+          </div>
+          <div class="obs-form-group">
+            <label class="obs-label" for="studioBgSelect">Fundo da Moldura Estúdio (Screen Studio)</label>
+            <select class="obs-select" id="studioBgSelect">
+              <option value="none" selected>Desativado (Tela Original 100%)</option>
+              <option value="ocean">Gradiente Oceano Profundo (Azul / Roxo)</option>
+              <option value="emerald">Gradiente Aurora (Esmeralda / Índigo)</option>
+              <option value="sunset">Gradiente Cyber Sunset (Coral / Violeta)</option>
+              <option value="graphite">Estúdio Grafite Escuro (Minimalista)</option>
+            </select>
+          </div>
+        </div>
+        <div class="obs-modal-footer">
+          <button class="obs-btn obs-btn-secondary" id="refreshDevicesBtn" type="button">🔄 Atualizar Lista</button>
+          <button class="obs-btn obs-btn-record" id="saveDevicesBtn" type="button">Concluído</button>
         </div>
       </div>
     </div>

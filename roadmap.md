@@ -50,36 +50,36 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 
 ---
 
-### 🔵 Versão 1.2 — Recursos "Showstopper" & Lançamento Público
+### 🟢 Versão 1.2 — Recursos "Showstopper" & Lançamento Público *(Concluído)*
 > **Objetivo:** Implementar recursos de alto apelo visual para lançamento em redes sociais, fóruns de desenvolvedores e comunidades abertas.
 
 - [x] **Câmera Flutuante do Apresentador (Facecam PiP):**
   - Câmera em formato circular com borda personalizável sobreposta ao vídeo.
   - Liberdade total de posicionamento via Drag & Drop na tela e composição dinâmica em tempo real no vídeo gravado.
   - Opções de alternância de formato (Círculo / Retângulo), espelhamento horizontal (flip) e Picture-in-Picture flutuante no SO.
-- [ ] **Exportação para GIF Otimizado:**
-  - Botão de download rápido em formato `.gif` de alta fluidez (15–24 fps), pensado para Pull Requests, issues do GitHub e chats (Slack/Discord).
+- [x] **Exportação para GIF Otimizado (`.gif`):**
+  - Codificador GIF89a nativo em JS puro no modal final para baixar trechos como `.gif` animado, pensado para Pull Requests, issues do GitHub e chats (Slack/Discord).
 - [x] **Alternância de Tema (Modo Escuro & Modo Claro em 1 Clique):**
   - Botão na barra superior (`🌙 Escuro` / `☀️ Claro`) com persistência no `localStorage` e paleta adaptada para alto contraste e legibilidade.
-- [ ] **Efeito Visual no Clique do Mouse (Click Ripple):**
-  - Destaque visual (círculo animado) na posição dos cliques para melhorar vídeos de tutoriais e demonstrações.
-- [ ] **Deploy Público Oficial (GitHub Pages):**
-  - Publicação da aplicação online com link acessível diretamente no topo do repositório.
+- [x] **Efeito Visual no Clique do Mouse (Click Ripple):**
+  - Destaque visual (círculo animado) na posição dos cliques na tela de prévia e no vídeo gravado para melhorar tutoriais e demonstrações.
+- [x] **Seletor de Formato de Arquivo (`MP4`, `MKV`, `WebM`) & Dispositivos de Entrada:**
+  - Modal dedicado na aba `Arquivo` + seletor rápido no dock `Configurações` com persistência em `localStorage`, além do seletor de Microfone e Webcam na aba `Dispositivos`.
 - 🚀 **Marco de Divulgação 1:** Post de lançamento no **TabNews**, **Twitter/X** e **LinkedIn**.
 
 ---
 
-### 🟣 Versão 1.3 — Estúdio & Pós-Produção Leve
+### 🟢 Versão 1.3 — Estúdio & Pós-Produção Leve *(Concluído)*
 > **Objetivo:** Permitir ao usuário lapidar e estilizar seu conteúdo antes de compartilhar, sem precisar de editores pesados.
 
-- [ ] **Editor de Início e Fim (Trim Tool):**
-  - Barra deslizante com mini-player para cortar segundos iniciais ou finais antes do download.
-- [ ] **Moldura Estilo "Screen Studio" / Gradiente de Fundo:**
-  - Adição opcional de cantos arredondados, sombra 3D projetada e fundo com gradiente estético no vídeo exportado.
-- [ ] **Histórico Local de Gravações Recentes (IndexedDB):**
-  - Armazenamento temporário das últimas gravações no próprio navegador para proteger contra fechamentos acidentais de aba.
-- [ ] **PWA (Progressive Web App):**
-  - Instalação no computador como aplicativo nativo e funcionamento 100% offline.
+- [x] **Editor de Início e Fim (Trim Tool):**
+  - Controles deslizantes de início e fim no modal pós-gravação para cortar trechos indesejados antes do download.
+- [x] **Moldura Estilo "Screen Studio" / Gradiente de Fundo (`✨ Moldura Estúdio`):**
+  - Adição opcional com 1 clique de cantos arredondados, sombra 3D projetada e 4 temas de gradiente (`Oceano`, `Aurora Esmeralda`, `Cyber Sunset`, `Grafite`) tanto na prévia quanto no vídeo exportado.
+- [x] **Histórico Local de Gravações Recentes (IndexedDB):**
+  - Armazenamento automático das últimas gravações no próprio navegador (aba `Gravações`) para proteger contra fechamentos acidentais de aba, com opção de rever, baixar ou excluir.
+- [x] **PWA (Progressive Web App):**
+  - `manifest.json` + Service Worker (`sw.js`) permitindo instalar o Captura Studio no computador como aplicativo nativo e funcionar offline.
 - 🚀 **Marco de Divulgação 2:** Lançamento no **Product Hunt** e **Hacker News (Show HN)**.
 
 ---
@@ -110,11 +110,13 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | Interface Dark OBS Studio | **v1.1** | Médio | Muito Alto | 🟢 Concluído |
 | Modo Claro / Escuro (1 Clique) | **v1.1** | Baixo | Alto | 🟢 Concluído |
 | Facecam PiP (Bolinha de Câmera Arrastável) | **v1.2** | Médio | Muito Alto | 🟢 Concluído |
-| Exportador de GIF Otimizado | **v1.2** | Médio | Muito Alto | 🟡 Planejado |
-| Editor Trim (Corte de Bordas) | **v1.3** | Médio | Alto | 🟡 Planejado |
-| Moldura Estilo Screen Studio | **v1.3** | Alto | Muito Alto | 🟡 Planejado |
-| PWA Offline | **v1.3** | Baixo | Médio | 🟡 Planejado |
-| Histórico IndexedDB | **v1.3** | Médio | Médio | 🟡 Planejado |
+| Seletor Direto de Formato (MP4 / MKV / WebM) | **v1.2** | Baixo | Alto | 🟢 Concluído |
+| Seletor de Dispositivos (Microfone & Câmera) | **v1.2** | Baixo | Alto | 🟢 Concluído |
+| Exportador de GIF Otimizado | **v1.2** | Médio | Muito Alto | 🟢 Concluído |
+| Editor Trim (Corte de Bordas) | **v1.3** | Médio | Alto | 🟢 Concluído |
+| Moldura Estilo Screen Studio | **v1.3** | Alto | Muito Alto | 🟢 Concluído |
+| PWA Offline | **v1.3** | Baixo | Médio | 🟢 Concluído |
+| Histórico IndexedDB | **v1.3** | Médio | Médio | 🟢 Concluído |
 | Transcrição Whisper Local | **v2.0** | Alto | Muito Alto | 🔮 Futuro |
 | Anotações na Tela | **v2.0** | Alto | Alto | 🔮 Futuro |
 
