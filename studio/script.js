@@ -1631,7 +1631,22 @@
     isUsingWhisper = false;
   }
 
-  // 100% Local Whisper AI in Browser (@xenova/transformers WebAssembly)
+  function resampleTo16kHz(audioData, origSampleRate) {
+    if (!origSampleRate || origSampleRate === 16000) return audioData;
+    const ratio = origSampleRate / 16000;
+    const newLength = Math.round(audioData.length / ratio);
+    const result = new Float32Array(newLength);
+    for (let i = 0; i < newLength; i++) {
+      const pos = i * ratio;
+      const idx = Math.floor(pos);
+      const frac = pos - idx;
+      const next = idx + 1 < audioData.length ? audioData[idx + 1] : audioData[idx];
+      result[i] = audioData[idx] + frac * (next - audioData[idx]);
+    }
+    return result;
+  }
+
+  // 100% Local Whisper AI in Browser (@xenova/transformers ESM Bundle)
   async function startLocalWhisperEngine() {
     stopAllCaptionEngines();
     isCaptionsActive = true;
@@ -1639,17 +1654,22 @@
     updateCaptionsUiState();
 
     if (liveCaptionText) {
-      liveCaptionText.textContent = '🧠 Carregando IA Whisper Local no navegador (1ª vez ~15s)...';
+      liveCaptionText.textContent = '🧠 Baixando IA Whisper Local (0%)...';
     }
-    showToast('Ativando motor Whisper IA 100% Local (funciona em qualquer navegador, inclusive Brave e Firefox)!', 4000);
+    showToast('Ativando motor Whisper IA 100% Local no navegador...', 3500);
 
     try {
       if (!whisperPipeline && !isWhisperLoading) {
         isWhisperLoading = true;
-        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
         env.allowLocalModels = false;
         whisperPipeline = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
           quantized: true,
+          progress_callback: (prog) => {
+            if (prog && typeof prog.progress === 'number' && liveCaptionText) {
+              liveCaptionText.textContent = `🧠 Baixando IA Whisper Local (${Math.round(prog.progress)}%)...`;
+            }
+          },
         });
         isWhisperLoading = false;
       }
@@ -1665,9 +1685,15 @@
       }
       whisperMicStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      whisperAudioCtx = new AudioCtx({ sampleRate: 16000 });
+      whisperAudioCtx = new AudioCtx();
+      if (whisperAudioCtx.state === 'suspended') {
+        await whisperAudioCtx.resume();
+      }
+      const nativeRate = whisperAudioCtx.sampleRate || 48000;
       const source = whisperAudioCtx.createMediaStreamSource(whisperMicStream);
       whisperProcessor = whisperAudioCtx.createScriptProcessor(4096, 1, 1);
+
+      const samplesForChunk = Math.round(nativeRate * 3.0);
 
       whisperProcessor.onaudioprocess = async (e) => {
         if (!isCaptionsActive || !isUsingWhisper) return;
@@ -1676,23 +1702,23 @@
           whisperSamples.push(input[i]);
         }
 
-        // Every ~3.2 seconds of audio (16000 * 3.2 = 51200 samples), run Whisper inference if speech energy > threshold
-        if (whisperSamples.length >= 51200 && !isWhisperTranscribing && whisperPipeline) {
-          const chunk = new Float32Array(whisperSamples.splice(0, whisperSamples.length));
+        if (whisperSamples.length >= samplesForChunk && !isWhisperTranscribing && whisperPipeline) {
+          const rawChunk = new Float32Array(whisperSamples.splice(0, whisperSamples.length));
           let sumSq = 0;
-          for (let i = 0; i < chunk.length; i++) sumSq += chunk[i] * chunk[i];
-          const rms = Math.sqrt(sumSq / chunk.length);
-          if (rms < 0.008) return; // Silence
+          for (let i = 0; i < rawChunk.length; i++) sumSq += rawChunk[i] * rawChunk[i];
+          const rms = Math.sqrt(sumSq / rawChunk.length);
+          if (rms < 0.005) return; // Silence
 
           isWhisperTranscribing = true;
           try {
-            const out = await whisperPipeline(chunk, {
+            const chunk16k = resampleTo16kHz(rawChunk, nativeRate);
+            const out = await whisperPipeline(chunk16k, {
               language: 'portuguese',
               task: 'transcribe',
             });
             const text = (out?.text || '').trim();
             if (text && !/^(\[.*\]|\(.*\)|\.+)$/.test(text)) {
-              pushCaptionSegment(text, 3200);
+              pushCaptionSegment(text, 3000);
             }
           } catch (err) {
             console.warn('Whisper chunk error:', err);
@@ -1769,13 +1795,8 @@
         };
 
         rec.onerror = (ev) => {
-          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
-            showToast('Permissão de voz negada. Alternando para modo manual / Whisper.', 3200);
-            return;
-          }
-          // In Brave, Vivaldi, or blocked networks, Web Speech throws 'network' -> switch automatically to Local Whisper AI!
-          if (ev.error === 'network') {
-            console.info('Web Speech API bloqueada pelo navegador (erro network). Ativando Whisper IA Local automaticamente...');
+          console.warn('SpeechRecognition error:', ev.error);
+          if (ev.error === 'network' || ev.error === 'service-not-allowed' || ev.error === 'not-allowed' || ev.error === 'audio-capture') {
             startLocalWhisperEngine();
           }
         };

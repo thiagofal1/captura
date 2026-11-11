@@ -5,10 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#161720">
   <title>Captura Studio — Gravador de Tela Web</title>
-  <link rel="manifest" href="/studio/manifest.json">
-  <link rel="stylesheet" href="/studio/style.css?v=2.1">
-  <script src="/studio/fix-webm-duration.js?v=2.1"></script>
-  <script src="/studio/script.js?v=2.1" defer></script>
+  <script>
+    if (location.protocol !== 'file:' && !location.pathname.endsWith('/') && !location.pathname.endsWith('.html')) {
+      history.replaceState(null, '', location.pathname + '/' + location.search + location.hash);
+    }
+  </script>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css?v=2.2">
+  <script src="fix-webm-duration.js?v=2.2"></script>
+  <script src="script.js?v=2.2" defer></script>
 </head>
 <body class="obs-theme">
   <div class="app-window">
