@@ -74,6 +74,14 @@
   const sourceWebcamStatus = document.querySelector('#sourceWebcamStatus');
   const canvasWebcamToggleBtn = document.querySelector('#canvasWebcamToggleBtn');
   const canvasStudioFrameBtn = document.querySelector('#canvasStudioFrameBtn');
+  const canvasAnnotateBtn = document.querySelector('#canvasAnnotateBtn');
+  const toggleAnnotateSourceBtn = document.querySelector('#toggleAnnotateSourceBtn');
+  const sourceAnnotateStatus = document.querySelector('#sourceAnnotateStatus');
+  const annotationToolbar = document.querySelector('#annotationToolbar');
+  const annotationCanvas = document.querySelector('#annotationCanvas');
+  const blurZonesContainer = document.querySelector('#blurZonesContainer');
+  const annoUndoBtn = document.querySelector('#annoUndoBtn');
+  const annoClearBtn = document.querySelector('#annoClearBtn');
   const sourceSettingsBtn = document.querySelector('#sourceSettingsBtn');
 
   // Facecam PiP Elements
@@ -216,6 +224,15 @@
   let compositeCtx = null;
   let compositeStream = null;
   let compositeAnimId = null;
+
+  // v2.0 Real-Time Annotations & Privacy Blur State
+  let isAnnoToolbarOpen = false;
+  let currentAnnoTool = 'cursor'; // 'cursor' | 'pen' | 'arrow' | 'rect' | 'blur'
+  let currentAnnoColor = '#ff4757';
+  let annoHistory = []; // [{ kind: 'vector', tool, color, points, x1, y1, x2, y2 } | { kind: 'blur', id, x, y, w, h }]
+  let blurRegions = []; // [{ id, x, y, w, h }] normalized 0..1
+  let isDrawingAnno = false;
+  let draftAnno = null;
 
   // --- Toast Notification Helper ---
   function showToast(message, duration = 4500) {
@@ -1043,6 +1060,39 @@
         compositeCtx.drawImage(previewVideo, 0, 0, w, h);
       }
 
+      // 1.5. Draw Privacy Blur Masks (v2.0) directly onto recorded video
+      if (blurRegions.length > 0) {
+        for (const b of blurRegions) {
+          const bx = b.x * w;
+          const by = b.y * h;
+          const bw = b.w * w;
+          const bh = b.h * h;
+          if (bw < 4 || bh < 4) continue;
+          compositeCtx.save();
+          drawRoundedRect(compositeCtx, bx, by, bw, bh, Math.round(w * 0.005));
+          compositeCtx.clip();
+          compositeCtx.filter = `blur(${Math.max(12, Math.round(w * 0.012))}px)`;
+          if (studioBgMode !== 'none' && stops) {
+            const padX = Math.round(w * 0.035);
+            const padY = Math.round(h * 0.035);
+            const innerW = w - padX * 2;
+            const innerH = h - padY * 2;
+            compositeCtx.drawImage(previewVideo, padX, padY, innerW, innerH);
+          } else {
+            compositeCtx.drawImage(previewVideo, 0, 0, w, h);
+          }
+          compositeCtx.filter = 'none';
+          compositeCtx.fillStyle = 'rgba(18, 20, 30, 0.32)';
+          compositeCtx.fillRect(bx, by, bw, bh);
+          compositeCtx.restore();
+        }
+      }
+
+      // 1.8. Draw Real-Time Screen Annotations (Pen, Arrows, Boxes — v2.0)
+      if (annotationCanvas && annotationCanvas.width > 0 && annotationCanvas.height > 0) {
+        compositeCtx.drawImage(annotationCanvas, 0, 0, w, h);
+      }
+
       // 2. Draw Webcam Bubble (Facecam PiP) if active
       if (isWebcamActive && webcamVideo && webcamVideo.readyState >= 2) {
         const pipW = (pipWidthPercent / 100) * w;
@@ -1128,6 +1178,303 @@
       compositeStream = null;
     }
   }
+
+  // --- v2.0 Real-Time Annotations & Privacy Blur Engine ---
+  function syncAnnoCanvasSize() {
+    if (!annotationCanvas || !previewContainer) return;
+    const rect = previewContainer.getBoundingClientRect();
+    const w = Math.max(640, Math.round(rect.width * (window.devicePixelRatio || 1)));
+    const h = Math.max(360, Math.round(rect.height * (window.devicePixelRatio || 1)));
+    if (annotationCanvas.width !== w || annotationCanvas.height !== h) {
+      annotationCanvas.width = w;
+      annotationCanvas.height = h;
+      redrawAnnotations();
+    }
+  }
+
+  function updateAnnotateSourceStatus() {
+    if (!sourceAnnotateStatus) return;
+    const count = annoHistory.length;
+    if (isAnnoToolbarOpen) {
+      sourceAnnotateStatus.textContent = count > 0 ? `Ativo (${count})` : 'Barra Aberta';
+      sourceAnnotateStatus.style.color = '#38d39f';
+      toggleAnnotateSourceBtn?.classList.remove('muted');
+      toggleAnnotateSourceBtn?.classList.add('active');
+    } else {
+      sourceAnnotateStatus.textContent = count > 0 ? `${count} item(ns)` : 'Pronto';
+      sourceAnnotateStatus.style.color = '';
+      toggleAnnotateSourceBtn?.classList.add('muted');
+      toggleAnnotateSourceBtn?.classList.remove('active');
+    }
+  }
+
+  function toggleAnnotationToolbar(forceState) {
+    isAnnoToolbarOpen = forceState !== undefined ? forceState : !isAnnoToolbarOpen;
+    if (annotationToolbar) {
+      annotationToolbar.hidden = !isAnnoToolbarOpen;
+    }
+    canvasAnnotateBtn?.classList.toggle('active', isAnnoToolbarOpen);
+    if (isAnnoToolbarOpen) {
+      syncAnnoCanvasSize();
+      if (currentAnnoTool === 'cursor') {
+        setAnnoTool('pen');
+      } else {
+        setAnnoTool(currentAnnoTool);
+      }
+      showToast('Modo Anotação & Blur ativado! Escolha Caneta, Seta, Caixa ou Blur Privado.');
+    } else {
+      setAnnoTool('cursor');
+    }
+    updateAnnotateSourceStatus();
+  }
+
+  function setAnnoTool(tool) {
+    currentAnnoTool = tool;
+    document.querySelectorAll('[data-anno-tool]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-anno-tool') === tool);
+    });
+    if (annotationCanvas) {
+      const drawingActive = isAnnoToolbarOpen && tool !== 'cursor';
+      annotationCanvas.classList.toggle('drawing-active', drawingActive);
+    }
+  }
+
+  function renderBlurZonesDom() {
+    if (!blurZonesContainer) return;
+    blurZonesContainer.innerHTML = '';
+    for (const b of blurRegions) {
+      const box = document.createElement('div');
+      box.className = 'blur-zone-box';
+      box.style.left = `${(b.x * 100).toFixed(2)}%`;
+      box.style.top = `${(b.y * 100).toFixed(2)}%`;
+      box.style.width = `${(b.w * 100).toFixed(2)}%`;
+      box.style.height = `${(b.h * 100).toFixed(2)}%`;
+      box.title = 'Área protegida com desfoque (Blur)';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'blur-zone-remove';
+      removeBtn.textContent = '× Remover Blur';
+      removeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        blurRegions = blurRegions.filter((item) => item.id !== b.id);
+        annoHistory = annoHistory.filter((item) => !(item.kind === 'blur' && item.id === b.id));
+        renderBlurZonesDom();
+        updateAnnotateSourceStatus();
+      });
+
+      box.appendChild(removeBtn);
+      blurZonesContainer.appendChild(box);
+    }
+  }
+
+  function drawSingleVectorItem(ctx, w, h, item) {
+    ctx.save();
+    ctx.strokeStyle = item.color || '#ff4757';
+    ctx.fillStyle = item.color || '#ff4757';
+    ctx.lineWidth = Math.max(3, Math.round(w * 0.0038));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (item.tool === 'pen' && item.points && item.points.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(item.points[0].x * w, item.points[0].y * h);
+      for (let i = 1; i < item.points.length; i++) {
+        ctx.lineTo(item.points[i].x * w, item.points[i].y * h);
+      }
+      ctx.stroke();
+    } else if (item.tool === 'rect') {
+      const rx = Math.min(item.x1, item.x2) * w;
+      const ry = Math.min(item.y1, item.y2) * h;
+      const rw = Math.abs(item.x2 - item.x1) * w;
+      const rh = Math.abs(item.y2 - item.y1) * h;
+      drawRoundedRect(ctx, rx, ry, rw, rh, Math.round(w * 0.006));
+      ctx.stroke();
+    } else if (item.tool === 'arrow') {
+      const x1 = item.x1 * w;
+      const y1 = item.y1 * h;
+      const x2 = item.x2 * w;
+      const y2 = item.y2 * h;
+      const headLen = Math.max(14, Math.round(w * 0.018));
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    } else if (item.tool === 'blur') {
+      const rx = Math.min(item.x1, item.x2) * w;
+      const ry = Math.min(item.y1, item.y2) * h;
+      const rw = Math.abs(item.x2 - item.x1) * w;
+      const rh = Math.abs(item.y2 - item.y1) * h;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#a55eea';
+      ctx.fillStyle = 'rgba(165, 94, 234, 0.22)';
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeRect(rx, ry, rw, rh);
+    }
+
+    ctx.restore();
+  }
+
+  function redrawAnnotations() {
+    if (!annotationCanvas) return;
+    const ctx = annotationCanvas.getContext('2d');
+    const w = annotationCanvas.width;
+    const h = annotationCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    for (const item of annoHistory) {
+      if (item.kind === 'vector') {
+        drawSingleVectorItem(ctx, w, h, item);
+      }
+    }
+
+    if (draftAnno) {
+      drawSingleVectorItem(ctx, w, h, draftAnno);
+    }
+  }
+
+  function undoLastAnnotation() {
+    if (annoHistory.length === 0) {
+      showToast('Nenhuma anotação ou blur para desfazer.', 2000);
+      return;
+    }
+    const removed = annoHistory.pop();
+    if (removed && removed.kind === 'blur') {
+      blurRegions = blurRegions.filter((b) => b.id !== removed.id);
+      renderBlurZonesDom();
+    }
+    redrawAnnotations();
+    updateAnnotateSourceStatus();
+  }
+
+  function clearAllAnnotations() {
+    annoHistory = [];
+    blurRegions = [];
+    draftAnno = null;
+    renderBlurZonesDom();
+    redrawAnnotations();
+    updateAnnotateSourceStatus();
+    showToast('Anotações e máscaras de blur limpas.', 2200);
+  }
+
+  if (annotationCanvas && previewContainer) {
+    window.addEventListener('resize', syncAnnoCanvasSize);
+
+    annotationCanvas.addEventListener('pointerdown', (e) => {
+      if (!isAnnoToolbarOpen || currentAnnoTool === 'cursor') return;
+      syncAnnoCanvasSize();
+      const rect = annotationCanvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      isDrawingAnno = true;
+      annotationCanvas.setPointerCapture(e.pointerId);
+
+      if (currentAnnoTool === 'pen') {
+        draftAnno = {
+          kind: 'vector',
+          tool: 'pen',
+          color: currentAnnoColor,
+          points: [{ x: nx, y: ny }],
+        };
+      } else {
+        draftAnno = {
+          kind: currentAnnoTool === 'blur' ? 'blur' : 'vector',
+          tool: currentAnnoTool,
+          color: currentAnnoColor,
+          x1: nx,
+          y1: ny,
+          x2: nx,
+          y2: ny,
+        };
+      }
+      redrawAnnotations();
+    });
+
+    annotationCanvas.addEventListener('pointermove', (e) => {
+      if (!isDrawingAnno || !draftAnno) return;
+      const rect = annotationCanvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const ny = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+      if (draftAnno.tool === 'pen') {
+        draftAnno.points.push({ x: nx, y: ny });
+      } else {
+        draftAnno.x2 = nx;
+        draftAnno.y2 = ny;
+      }
+      redrawAnnotations();
+    });
+
+    annotationCanvas.addEventListener('pointerup', () => {
+      if (!isDrawingAnno || !draftAnno) return;
+      isDrawingAnno = false;
+
+      if (draftAnno.tool === 'pen') {
+        if (draftAnno.points.length > 1) {
+          annoHistory.push(draftAnno);
+        }
+      } else if (draftAnno.tool === 'blur') {
+        const bx = Math.min(draftAnno.x1, draftAnno.x2);
+        const by = Math.min(draftAnno.y1, draftAnno.y2);
+        const bw = Math.abs(draftAnno.x2 - draftAnno.x1);
+        const bh = Math.abs(draftAnno.y2 - draftAnno.y1);
+        if (bw > 0.015 && bh > 0.015) {
+          const blurItem = {
+            kind: 'blur',
+            id: `blur-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            x: bx,
+            y: by,
+            w: bw,
+            h: bh,
+          };
+          blurRegions.push(blurItem);
+          annoHistory.push(blurItem);
+          renderBlurZonesDom();
+        }
+      } else {
+        const dist = Math.hypot(draftAnno.x2 - draftAnno.x1, draftAnno.y2 - draftAnno.y1);
+        if (dist > 0.01) {
+          annoHistory.push(draftAnno);
+        }
+      }
+
+      draftAnno = null;
+      redrawAnnotations();
+      updateAnnotateSourceStatus();
+    });
+  }
+
+  if (canvasAnnotateBtn) {
+    canvasAnnotateBtn.addEventListener('click', () => toggleAnnotationToolbar());
+  }
+  if (toggleAnnotateSourceBtn) {
+    toggleAnnotateSourceBtn.addEventListener('click', () => toggleAnnotationToolbar());
+  }
+  document.querySelectorAll('[data-anno-tool]').forEach((btn) => {
+    btn.addEventListener('click', () => setAnnoTool(btn.getAttribute('data-anno-tool')));
+  });
+  document.querySelectorAll('[data-anno-color]').forEach((dot) => {
+    dot.addEventListener('click', () => {
+      currentAnnoColor = dot.getAttribute('data-anno-color') || '#ff4757';
+      document.querySelectorAll('[data-anno-color]').forEach((d) => d.classList.remove('active'));
+      dot.classList.add('active');
+    });
+  });
+  if (annoUndoBtn) annoUndoBtn.addEventListener('click', undoLastAnnotation);
+  if (annoClearBtn) annoClearBtn.addEventListener('click', clearAllAnnotations);
 
   // Click Ripple on Preview Area
   if (previewContainer) {
@@ -1971,6 +2318,18 @@
     if (e.altKey && (e.code === 'KeyP' || e.key === 'p' || e.key === 'P')) {
       e.preventDefault();
       togglePause();
+    }
+
+    if (e.altKey && (e.code === 'KeyD' || e.key === 'd' || e.key === 'D')) {
+      e.preventDefault();
+      toggleAnnotationToolbar();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z')) {
+      if (annoHistory.length > 0) {
+        e.preventDefault();
+        undoLastAnnotation();
+      }
     }
 
     if (e.code === 'KeyM' && !e.ctrlKey && !e.altKey && !e.metaKey) {

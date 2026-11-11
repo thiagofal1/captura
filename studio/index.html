@@ -78,6 +78,33 @@
             </div>
           </div>
 
+          <!-- Privacy Blur Masks Container & Live Annotation Canvas (v2.0) -->
+          <div class="blur-zones-container" id="blurZonesContainer"></div>
+          <canvas class="annotation-canvas" id="annotationCanvas"></canvas>
+
+          <!-- Floating Annotation & Privacy Blur Toolbar (v2.0) -->
+          <div class="annotation-toolbar" id="annotationToolbar" hidden>
+            <div class="anno-tool-group" role="group" aria-label="Ferramentas de Anotação e Desfoque">
+              <button class="anno-btn active" data-anno-tool="cursor" type="button" title="Cursor Livre (Mover Câmera)">🖱️ Cursor</button>
+              <button class="anno-btn" data-anno-tool="pen" type="button" title="Caneta Livre">✏️ Caneta</button>
+              <button class="anno-btn" data-anno-tool="arrow" type="button" title="Seta Indicadora">↗️ Seta</button>
+              <button class="anno-btn" data-anno-tool="rect" type="button" title="Caixa de Destaque">⬜ Caixa</button>
+              <button class="anno-btn anno-btn-blur" data-anno-tool="blur" type="button" title="Desfocar Área Sensível (Senhas, Chaves, Dados)">🔒 Blur Privado</button>
+            </div>
+            <span class="anno-sep"></span>
+            <div class="anno-color-group" role="group" aria-label="Cor do Traço">
+              <button class="anno-color-dot active" data-anno-color="#ff4757" style="background:#ff4757" type="button" title="Vermelho"></button>
+              <button class="anno-color-dot" data-anno-color="#2ecc71" style="background:#2ecc71" type="button" title="Verde"></button>
+              <button class="anno-color-dot" data-anno-color="#f1c40f" style="background:#f1c40f" type="button" title="Amarelo"></button>
+              <button class="anno-color-dot" data-anno-color="#3e6bf0" style="background:#3e6bf0" type="button" title="Azul"></button>
+            </div>
+            <span class="anno-sep"></span>
+            <div class="anno-action-group">
+              <button class="anno-btn" id="annoUndoBtn" type="button" title="Desfazer último item (Ctrl+Z)">↩</button>
+              <button class="anno-btn anno-btn-danger" id="annoClearBtn" type="button" title="Limpar todas as anotações e blurs">🗑️</button>
+            </div>
+          </div>
+
           <!-- Canvas Live Indicators -->
           <div class="canvas-overlay-top">
             <div class="canvas-tag live-tag" id="liveTag" hidden>
@@ -97,6 +124,9 @@
             <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
           </div>
           <div class="canvas-toolbar-right">
+            <button class="canvas-action-btn" id="canvasAnnotateBtn" type="button" title="Ativar/Desativar Desenho na Tela e Blur de Privacidade (Alt+D)">
+              <span class="cam-icon">✏️</span> Anotar / Blur
+            </button>
             <button class="canvas-action-btn" id="canvasStudioFrameBtn" type="button" title="Ativar/Desativar Moldura Estúdio (Gradiente + Cantos Arredondados)">
               <span class="cam-icon">✨</span> Moldura Estúdio
             </button>
@@ -190,6 +220,17 @@
                 <div class="source-info">
                   <span class="source-title">Câmera (Facecam PiP)</span>
                   <span class="source-sub" id="sourceWebcamStatus">Desativada</span>
+                </div>
+              </div>
+              <!-- Source: Annotations & Blur (v2.0) -->
+              <div class="source-item" id="sourceAnnotateItem">
+                <button class="source-toggle-btn muted" id="toggleAnnotateSourceBtn" title="Ativar/Desativar Barra de Desenho & Blur (Alt+D)" type="button">
+                  <span class="source-eye-icon" id="annotateEyeIcon">✏️</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Anotações & Blur</span>
+                  <span class="source-sub" id="sourceAnnotateStatus">Pronto</span>
                 </div>
               </div>
             </div>
@@ -585,6 +626,8 @@
           <div class="shortcuts-grid">
             <div class="shortcut-row"><kbd>Espaço</kbd> ou <kbd>Alt + R</kbd> <span>Iniciar / Parar Gravação</span></div>
             <div class="shortcut-row"><kbd>Alt + P</kbd> <span>Pausar / Retomar Gravação</span></div>
+            <div class="shortcut-row"><kbd>Alt + D</kbd> <span>Abrir / Fechar Desenho & Blur</span></div>
+            <div class="shortcut-row"><kbd>Ctrl + Z</kbd> <span>Desfazer última Anotação / Blur</span></div>
             <div class="shortcut-row"><kbd>Esc</kbd> <span>Pular contagem / Fechar janelas</span></div>
             <div class="shortcut-row"><kbd>M</kbd> <span>Silenciar / Ativar Microfone</span></div>
           </div>

@@ -87,12 +87,14 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 ### 🔮 Versão 2.0 — Inovação & IA no Navegador (Visão Futura)
 > **Objetivo:** Adicionar recursos de vanguarda utilizando WebAssembly e WebGPU mantendo a privacidade total (client-side).
 
+- [x] **Landing Page Interativa (`/`) & Rota dedicada `/studio`:**
+  - Página de apresentação com prévia interativa da Moldura Estúdio e Webcam arrastável, mantendo o gravador dedicado em `/studio`.
+- [x] **Ferramenta de Desenho e Anotações em Tempo Real:**
+  - Caneta livre, setas direcionais e caixas de destaque desenháveis na tela antes ou durante a gravação (gravadas diretamente no vídeo final).
+- [x] **Desfoque de Áreas Sensíveis (Blur Mask):**
+  - Seleção de caixas de desfoque sobre senhas, tokens ou dados pessoais em tempo real (`backdrop-filter` + filtro de desfoque no canvas gravado).
 - [ ] **Legendas e Transcrição Local com Whisper (WebGPU):**
   - Geração de legendas `.srt` e transcrição em texto da narração sem envio de dados para servidores externos.
-- [ ] **Ferramenta de Desenho e Anotações em Tempo Real:**
-  - Caneta, setas e caixas desenháveis na tela durante a gravação.
-- [ ] **Desfoque de Áreas Sensíveis (Blur Mask):**
-  - Seleção de caixas de desfoque sobre senhas, tokens ou dados pessoais antes de gravar.
 
 ---
 
@@ -117,8 +119,10 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | Moldura Estilo Screen Studio | **v1.3** | Alto | Muito Alto | 🟢 Concluído |
 | PWA Offline | **v1.3** | Baixo | Médio | 🟢 Concluído |
 | Histórico IndexedDB | **v1.3** | Médio | Médio | 🟢 Concluído |
+| Landing Page (`/`) & Rota `/studio` | **v2.0** | Médio | Muito Alto | 🟢 Concluído |
+| Anotações na Tela (Caneta, Setas, Caixas) | **v2.0** | Alto | Alto | 🟢 Concluído |
+| Máscara de Desfoque (Blur de Privacidade) | **v2.0** | Médio | Muito Alto | 🟢 Concluído |
 | Transcrição Whisper Local | **v2.0** | Alto | Muito Alto | 🔮 Futuro |
-| Anotações na Tela | **v2.0** | Alto | Alto | 🔮 Futuro |
 
 ---
 
