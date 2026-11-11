@@ -1,16 +1,16 @@
-const CACHE_NAME = 'captura-studio-v1.3';
+const CACHE_NAME = 'captura-studio-v2.1';
 const ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './script.js',
-  './fix-webm-duration.js',
-  './manifest.json'
+  '/studio',
+  '/studio/index.html',
+  '/studio/style.css',
+  '/studio/script.js',
+  '/studio/fix-webm-duration.js',
+  '/studio/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS).catch(() => {}))
   );
   self.skipWaiting();
 });
@@ -27,18 +27,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const copy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return networkResponse;
-        })
-        .catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
-

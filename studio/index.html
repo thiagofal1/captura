@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#161720">
   <title>Captura Studio — Gravador de Tela Web</title>
   <link rel="manifest" href="/studio/manifest.json">
-  <link rel="stylesheet" href="/studio/style.css">
-  <script src="/studio/fix-webm-duration.js"></script>
-  <script src="/studio/script.js" defer></script>
+  <link rel="stylesheet" href="/studio/style.css?v=2.1">
+  <script src="/studio/fix-webm-duration.js?v=2.1"></script>
+  <script src="/studio/script.js?v=2.1" defer></script>
 </head>
 <body class="obs-theme">
   <div class="app-window">
@@ -84,7 +84,14 @@
 
           <!-- Live Captions / Subtitles Overlay (v2.0) -->
           <div class="live-captions-overlay" id="liveCaptionsOverlay" hidden>
-            <span class="live-caption-pill" id="liveCaptionText">🎙️ Legendas ativadas (fale no microfone)...</span>
+            <div class="live-caption-pill" id="liveCaptionPill">
+              <span class="caption-mic-dot" id="captionMicDot"></span>
+              <span id="liveCaptionText">🎙️ Legendas ativadas (fale no microfone)...</span>
+            </div>
+            <div class="live-caption-quickbar">
+              <input type="text" class="quick-caption-input" id="quickCaptionInput" placeholder="Ou digite uma legenda ao vivo e pressione Enter..." aria-label="Digitar legenda ao vivo">
+              <button type="button" class="quick-caption-btn" id="forceWhisperBtn" title="Usar IA Whisper Local (100% no navegador, ideal para Brave/Firefox)">🧠 Whisper Local</button>
+            </div>
           </div>
 
           <!-- Floating Annotation & Privacy Blur Toolbar (v2.0) -->

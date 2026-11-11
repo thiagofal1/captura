@@ -610,6 +610,10 @@
       captionSegments = [];
       currentSegmentStartMs = 0;
 
+      if (isCaptionsActive && !isUsingWhisper) {
+        startWebSpeechEngine();
+      }
+
       updateTimer();
       timerInterval = window.setInterval(updateTimer, 300);
 
@@ -1533,7 +1537,20 @@
   if (annoUndoBtn) annoUndoBtn.addEventListener('click', undoLastAnnotation);
   if (annoClearBtn) annoClearBtn.addEventListener('click', clearAllAnnotations);
 
-  // --- v2.0 Live Captions (SpeechRecognition) & Local .SRT Generator ---
+  // --- v2.0 Live Captions (Web Speech API + Local Whisper AI Fallback) & .SRT Generator ---
+  const quickCaptionInput = document.querySelector('#quickCaptionInput');
+  const forceWhisperBtn = document.querySelector('#forceWhisperBtn');
+
+  let speechRestartTimer = null;
+  let whisperPipeline = null;
+  let isWhisperLoading = false;
+  let isUsingWhisper = false;
+  let whisperMicStream = null;
+  let whisperAudioCtx = null;
+  let whisperProcessor = null;
+  let whisperSamples = [];
+  let isWhisperTranscribing = false;
+
   function getElapsedRecordingMs() {
     if (!startedAt) return 0;
     const currentPause = pausedAt ? Date.now() - pausedAt : 0;
@@ -1549,109 +1566,277 @@
     return `${hours}:${minutes}:${seconds},${millis}`;
   }
 
+  function pushCaptionSegment(text, customDurationMs = 2800) {
+    const clean = (text || '').trim();
+    if (!clean) return;
+    const nowMs = getElapsedRecordingMs();
+    const startMs = currentSegmentStartMs > 0 ? currentSegmentStartMs : Math.max(0, nowMs - customDurationMs);
+    const endMs = Math.max(startMs + 1200, nowMs);
+    captionSegments.push({ startMs, endMs, text: clean });
+    currentSegmentStartMs = 0;
+
+    activeCaptionLine = clean;
+    activeCaptionUpdatedAt = performance.now();
+    if (liveCaptionText) {
+      liveCaptionText.textContent = clean;
+    }
+  }
+
   function updateCaptionsUiState() {
     canvasCaptionsBtn?.classList.toggle('active', isCaptionsActive);
     toggleCaptionsSourceBtn?.classList.toggle('active', isCaptionsActive);
     toggleCaptionsSourceBtn?.classList.toggle('muted', !isCaptionsActive);
+    forceWhisperBtn?.classList.toggle('active', isUsingWhisper);
     if (liveCaptionsOverlay) {
       liveCaptionsOverlay.hidden = !isCaptionsActive;
     }
     if (sourceCaptionsStatus) {
-      sourceCaptionsStatus.textContent = isCaptionsActive ? 'Ao Vivo (.SRT)' : 'Desativada';
-      sourceCaptionsStatus.style.color = isCaptionsActive ? '#38d39f' : '';
+      if (!isCaptionsActive) {
+        sourceCaptionsStatus.textContent = 'Desativada';
+        sourceCaptionsStatus.style.color = '';
+      } else {
+        sourceCaptionsStatus.textContent = isUsingWhisper ? 'Whisper IA (.SRT)' : 'Ao Vivo (.SRT)';
+        sourceCaptionsStatus.style.color = '#38d39f';
+      }
     }
   }
 
-  function toggleLiveCaptions(forceState) {
-    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const nextState = forceState !== undefined ? forceState : !isCaptionsActive;
+  function stopAllCaptionEngines() {
+    if (speechRestartTimer) {
+      clearTimeout(speechRestartTimer);
+      speechRestartTimer = null;
+    }
+    if (speechRecognition) {
+      try {
+        speechRecognition.onend = null;
+        speechRecognition.onerror = null;
+        speechRecognition.onresult = null;
+        speechRecognition.stop();
+      } catch {}
+      speechRecognition = null;
+    }
+    if (whisperProcessor) {
+      try { whisperProcessor.disconnect(); } catch {}
+      whisperProcessor = null;
+    }
+    if (whisperAudioCtx) {
+      try { whisperAudioCtx.close(); } catch {}
+      whisperAudioCtx = null;
+    }
+    if (whisperMicStream) {
+      whisperMicStream.getTracks().forEach((t) => t.stop());
+      whisperMicStream = null;
+    }
+    whisperSamples = [];
+    isUsingWhisper = false;
+  }
 
+  // 100% Local Whisper AI in Browser (@xenova/transformers WebAssembly)
+  async function startLocalWhisperEngine() {
+    stopAllCaptionEngines();
+    isCaptionsActive = true;
+    isUsingWhisper = true;
+    updateCaptionsUiState();
+
+    if (liveCaptionText) {
+      liveCaptionText.textContent = '🧠 Carregando IA Whisper Local no navegador (1ª vez ~15s)...';
+    }
+    showToast('Ativando motor Whisper IA 100% Local (funciona em qualquer navegador, inclusive Brave e Firefox)!', 4000);
+
+    try {
+      if (!whisperPipeline && !isWhisperLoading) {
+        isWhisperLoading = true;
+        const { pipeline, env } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+        env.allowLocalModels = false;
+        whisperPipeline = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny', {
+          quantized: true,
+        });
+        isWhisperLoading = false;
+      }
+
+      if (!isCaptionsActive) return;
+
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+      };
+      if (selectedMicDeviceId && selectedMicDeviceId !== 'default') {
+        audioConstraints.deviceId = { exact: selectedMicDeviceId };
+      }
+      whisperMicStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      whisperAudioCtx = new AudioCtx({ sampleRate: 16000 });
+      const source = whisperAudioCtx.createMediaStreamSource(whisperMicStream);
+      whisperProcessor = whisperAudioCtx.createScriptProcessor(4096, 1, 1);
+
+      whisperProcessor.onaudioprocess = async (e) => {
+        if (!isCaptionsActive || !isUsingWhisper) return;
+        const input = e.inputBuffer.getChannelData(0);
+        for (let i = 0; i < input.length; i++) {
+          whisperSamples.push(input[i]);
+        }
+
+        // Every ~3.2 seconds of audio (16000 * 3.2 = 51200 samples), run Whisper inference if speech energy > threshold
+        if (whisperSamples.length >= 51200 && !isWhisperTranscribing && whisperPipeline) {
+          const chunk = new Float32Array(whisperSamples.splice(0, whisperSamples.length));
+          let sumSq = 0;
+          for (let i = 0; i < chunk.length; i++) sumSq += chunk[i] * chunk[i];
+          const rms = Math.sqrt(sumSq / chunk.length);
+          if (rms < 0.008) return; // Silence
+
+          isWhisperTranscribing = true;
+          try {
+            const out = await whisperPipeline(chunk, {
+              language: 'portuguese',
+              task: 'transcribe',
+            });
+            const text = (out?.text || '').trim();
+            if (text && !/^(\[.*\]|\(.*\)|\.+)$/.test(text)) {
+              pushCaptionSegment(text, 3200);
+            }
+          } catch (err) {
+            console.warn('Whisper chunk error:', err);
+          } finally {
+            isWhisperTranscribing = false;
+          }
+        }
+      };
+
+      source.connect(whisperProcessor);
+      whisperProcessor.connect(whisperAudioCtx.destination);
+
+      if (liveCaptionText) {
+        liveCaptionText.textContent = '🧠 Whisper IA Local pronto! Fale no microfone...';
+      }
+    } catch (err) {
+      isWhisperLoading = false;
+      console.warn('Erro ao iniciar Whisper Local:', err);
+      if (liveCaptionText) {
+        liveCaptionText.textContent = '⌨️ Digite suas legendas abaixo (Enter para exibir ao vivo)';
+      }
+    }
+  }
+
+  function startWebSpeechEngine() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      startLocalWhisperEngine();
+      return;
+    }
+
+    stopAllCaptionEngines();
+    isCaptionsActive = true;
+    isUsingWhisper = false;
+    updateCaptionsUiState();
+
+    function createAndStartRec() {
+      if (!isCaptionsActive || isUsingWhisper) return;
+      try {
+        const rec = new SpeechRec();
+        speechRecognition = rec;
+        rec.lang = 'pt-BR';
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.maxAlternatives = 1;
+
+        rec.onresult = (event) => {
+          let interim = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res = event.results[i];
+            const txt = res[0]?.transcript?.trim() || '';
+            if (!txt) continue;
+
+            if (res.isFinal) {
+              finalTranscript += (finalTranscript ? ' ' : '') + txt;
+              pushCaptionSegment(txt, 2600);
+            } else {
+              if (currentSegmentStartMs === 0) {
+                currentSegmentStartMs = getElapsedRecordingMs();
+              }
+              interim += (interim ? ' ' : '') + txt;
+            }
+          }
+
+          if (interim) {
+            activeCaptionLine = interim;
+            activeCaptionUpdatedAt = performance.now();
+            if (liveCaptionText) {
+              liveCaptionText.textContent = interim;
+            }
+          }
+        };
+
+        rec.onerror = (ev) => {
+          if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
+            showToast('Permissão de voz negada. Alternando para modo manual / Whisper.', 3200);
+            return;
+          }
+          // In Brave, Vivaldi, or blocked networks, Web Speech throws 'network' -> switch automatically to Local Whisper AI!
+          if (ev.error === 'network') {
+            console.info('Web Speech API bloqueada pelo navegador (erro network). Ativando Whisper IA Local automaticamente...');
+            startLocalWhisperEngine();
+          }
+        };
+
+        rec.onend = () => {
+          if (isCaptionsActive && !isUsingWhisper) {
+            if (speechRestartTimer) clearTimeout(speechRestartTimer);
+            speechRestartTimer = setTimeout(() => {
+              if (isCaptionsActive && !isUsingWhisper) {
+                createAndStartRec();
+              }
+            }, 280);
+          }
+        };
+
+        rec.start();
+      } catch (err) {
+        console.warn('Falha ao iniciar Web Speech, ativando Whisper Local:', err);
+        startLocalWhisperEngine();
+      }
+    }
+
+    createAndStartRec();
+    if (liveCaptionText) {
+      liveCaptionText.textContent = '🎙️ Ouvindo microfone (fale agora ou digite abaixo)...';
+    }
+    showToast('Legendas ao vivo (.SRT) ativadas! Fale no microfone ou digite na barra rápida.', 3500);
+  }
+
+  function toggleLiveCaptions(forceState) {
+    const nextState = forceState !== undefined ? forceState : !isCaptionsActive;
     if (!nextState) {
       isCaptionsActive = false;
       activeCaptionLine = '';
-      if (speechRecognition) {
-        try { speechRecognition.stop(); } catch {}
-        speechRecognition = null;
-      }
+      stopAllCaptionEngines();
       updateCaptionsUiState();
-      showToast('Legendas ao vivo desativadas.', 2200);
+      showToast('Legendas ao vivo desativadas.', 2000);
       return;
     }
+    startWebSpeechEngine();
+  }
 
-    if (!SpeechRec) {
-      showToast('⚠️ Reconhecimento de fala nativo não suportado neste navegador (use Chrome ou Edge). Você ainda pode digitar e exportar .SRT ao final!', 4500);
-      return;
-    }
+  if (forceWhisperBtn) {
+    forceWhisperBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startLocalWhisperEngine();
+    });
+  }
 
-    try {
-      speechRecognition = new SpeechRec();
-      speechRecognition.lang = 'pt-BR';
-      speechRecognition.continuous = true;
-      speechRecognition.interimResults = true;
-
-      speechRecognition.onresult = (event) => {
-        let interim = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const res = event.results[i];
-          const txt = res[0]?.transcript?.trim() || '';
-          if (!txt) continue;
-
-          if (res.isFinal) {
-            finalTranscript += (finalTranscript ? ' ' : '') + txt;
-            const nowMs = getElapsedRecordingMs();
-            const startMs = currentSegmentStartMs > 0 ? currentSegmentStartMs : Math.max(0, nowMs - 2500);
-            const endMs = Math.max(startMs + 1200, nowMs);
-            captionSegments.push({
-              startMs,
-              endMs,
-              text: txt,
-            });
-            currentSegmentStartMs = 0;
-          } else {
-            if (currentSegmentStartMs === 0) {
-              currentSegmentStartMs = getElapsedRecordingMs();
-            }
-            interim += (interim ? ' ' : '') + txt;
-          }
+  if (quickCaptionInput) {
+    quickCaptionInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = quickCaptionInput.value.trim();
+        if (val) {
+          pushCaptionSegment(val, 3500);
+          quickCaptionInput.value = '';
         }
-
-        const display = interim || finalTranscript;
-        if (display) {
-          activeCaptionLine = display;
-          activeCaptionUpdatedAt = performance.now();
-          if (liveCaptionText) {
-            liveCaptionText.textContent = display;
-          }
-        }
-      };
-
-      speechRecognition.onerror = (ev) => {
-        if (ev.error === 'not-allowed') {
-          isCaptionsActive = false;
-          updateCaptionsUiState();
-          showToast('Permissão de microfone negada para legendas.');
-        }
-      };
-
-      speechRecognition.onend = () => {
-        if (isCaptionsActive && speechRecognition) {
-          try { speechRecognition.start(); } catch {}
-        }
-      };
-
-      speechRecognition.start();
-      isCaptionsActive = true;
-      if (liveCaptionText) {
-        liveCaptionText.textContent = '🎙️ Legendas ativadas (fale no microfone)...';
       }
-      updateCaptionsUiState();
-      showToast('Legendas automáticas (.SRT) ativadas! Sua fala será exibida no vídeo e salva para download.', 3800);
-    } catch (err) {
-      console.warn('Erro ao iniciar SpeechRecognition:', err);
-      showToast('Não foi possível iniciar as legendas automáticas.');
-    }
+    });
   }
 
   function buildSrtContent() {
@@ -2696,12 +2881,18 @@
     cleanupStreams();
     stopWebcam();
     stopCanvasCompositing();
+    stopAllCaptionEngines();
     if (currentVideoUrl) URL.revokeObjectURL(currentVideoUrl);
   });
 
-  // Register PWA Service Worker
+  // Register & Update PWA Service Worker (and purge stale caches)
+  if ('caches' in window) {
+    caches.keys().then((keys) => {
+      keys.filter((k) => k !== 'captura-studio-v2.1').forEach((k) => caches.delete(k));
+    }).catch(() => {});
+  }
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch(() => {});
   }
 
   // Initializations
