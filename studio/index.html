@@ -82,6 +82,11 @@
           <div class="blur-zones-container" id="blurZonesContainer"></div>
           <canvas class="annotation-canvas" id="annotationCanvas"></canvas>
 
+          <!-- Live Captions / Subtitles Overlay (v2.0) -->
+          <div class="live-captions-overlay" id="liveCaptionsOverlay" hidden>
+            <span class="live-caption-pill" id="liveCaptionText">🎙️ Legendas ativadas (fale no microfone)...</span>
+          </div>
+
           <!-- Floating Annotation & Privacy Blur Toolbar (v2.0) -->
           <div class="annotation-toolbar" id="annotationToolbar" hidden>
             <div class="anno-tool-group" role="group" aria-label="Ferramentas de Anotação e Desfoque">
@@ -124,6 +129,9 @@
             <span class="canvas-tool-label" id="streamResolutionLabel">Fonte: Nenhuma selecionada</span>
           </div>
           <div class="canvas-toolbar-right">
+            <button class="canvas-action-btn" id="canvasCaptionsBtn" type="button" title="Ativar/Desativar Legendas Automáticas e Transcrição .SRT (Alt+C)">
+              <span class="cam-icon">💬</span> Legendas (CC)
+            </button>
             <button class="canvas-action-btn" id="canvasAnnotateBtn" type="button" title="Ativar/Desativar Desenho na Tela e Blur de Privacidade (Alt+D)">
               <span class="cam-icon">✏️</span> Anotar / Blur
             </button>
@@ -231,6 +239,17 @@
                 <div class="source-info">
                   <span class="source-title">Anotações & Blur</span>
                   <span class="source-sub" id="sourceAnnotateStatus">Pronto</span>
+                </div>
+              </div>
+              <!-- Source: Live Captions & SRT (v2.0) -->
+              <div class="source-item" id="sourceCaptionsItem">
+                <button class="source-toggle-btn muted" id="toggleCaptionsSourceBtn" title="Ativar/Desativar Legendas Ao Vivo & .SRT (Alt+C)" type="button">
+                  <span class="source-eye-icon" id="captionsEyeIcon">💬</span>
+                </button>
+                <span class="source-lock-icon">🔒</span>
+                <div class="source-info">
+                  <span class="source-title">Legendas & .SRT (CC)</span>
+                  <span class="source-sub" id="sourceCaptionsStatus">Desativada</span>
                 </div>
               </div>
             </div>
@@ -532,6 +551,23 @@
               </button>
             </div>
           </div>
+
+          <!-- Local Transcript & SRT Export Box (v2.0) -->
+          <div class="trim-bar-box transcript-bar-box" id="transcriptBarBox">
+            <div class="trim-bar-header">
+              <span class="trim-title">💬 Transcrição & Legendas Locais (.SRT)</span>
+              <span class="trim-range-label" id="transcriptCountLabel">0 blocos capturados</span>
+            </div>
+            <textarea class="transcript-textarea" id="transcriptTextarea" rows="3" placeholder="Ative '💬 Legendas (CC)' antes ou durante a gravação para transcrever sua fala automaticamente, ou digite/edite suas legendas aqui..."></textarea>
+            <div class="transcript-actions-row">
+              <button class="obs-btn obs-btn-secondary" id="copyTranscriptBtn" type="button" title="Copiar texto da transcrição">
+                📋 Copiar Texto
+              </button>
+              <button class="obs-btn obs-btn-secondary" id="downloadSrtBtn" type="button" title="Baixar arquivo de legendas SubRip (.srt)">
+                💬 Baixar Legendas (.srt)
+              </button>
+            </div>
+          </div>
         </div>
         <div class="obs-modal-footer">
           <a class="obs-btn obs-btn-record" id="modalDownloadBtn" href="#" download="gravacao-captura.webm">
@@ -627,6 +663,7 @@
             <div class="shortcut-row"><kbd>Espaço</kbd> ou <kbd>Alt + R</kbd> <span>Iniciar / Parar Gravação</span></div>
             <div class="shortcut-row"><kbd>Alt + P</kbd> <span>Pausar / Retomar Gravação</span></div>
             <div class="shortcut-row"><kbd>Alt + D</kbd> <span>Abrir / Fechar Desenho & Blur</span></div>
+            <div class="shortcut-row"><kbd>Alt + C</kbd> <span>Ativar / Desativar Legendas (.SRT)</span></div>
             <div class="shortcut-row"><kbd>Ctrl + Z</kbd> <span>Desfazer última Anotação / Blur</span></div>
             <div class="shortcut-row"><kbd>Esc</kbd> <span>Pular contagem / Fechar janelas</span></div>
             <div class="shortcut-row"><kbd>M</kbd> <span>Silenciar / Ativar Microfone</span></div>

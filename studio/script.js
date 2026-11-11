@@ -82,6 +82,15 @@
   const blurZonesContainer = document.querySelector('#blurZonesContainer');
   const annoUndoBtn = document.querySelector('#annoUndoBtn');
   const annoClearBtn = document.querySelector('#annoClearBtn');
+  const canvasCaptionsBtn = document.querySelector('#canvasCaptionsBtn');
+  const toggleCaptionsSourceBtn = document.querySelector('#toggleCaptionsSourceBtn');
+  const sourceCaptionsStatus = document.querySelector('#sourceCaptionsStatus');
+  const liveCaptionsOverlay = document.querySelector('#liveCaptionsOverlay');
+  const liveCaptionText = document.querySelector('#liveCaptionText');
+  const transcriptCountLabel = document.querySelector('#transcriptCountLabel');
+  const transcriptTextarea = document.querySelector('#transcriptTextarea');
+  const copyTranscriptBtn = document.querySelector('#copyTranscriptBtn');
+  const downloadSrtBtn = document.querySelector('#downloadSrtBtn');
   const sourceSettingsBtn = document.querySelector('#sourceSettingsBtn');
 
   // Facecam PiP Elements
@@ -233,6 +242,14 @@
   let blurRegions = []; // [{ id, x, y, w, h }] normalized 0..1
   let isDrawingAnno = false;
   let draftAnno = null;
+
+  // v2.0 Live Captions & Local .SRT Transcript State
+  let isCaptionsActive = false;
+  let speechRecognition = null;
+  let activeCaptionLine = '';
+  let activeCaptionUpdatedAt = 0;
+  let captionSegments = []; // [{ startMs, endMs, text }]
+  let currentSegmentStartMs = 0;
 
   // --- Toast Notification Helper ---
   function showToast(message, duration = 4500) {
@@ -590,6 +607,8 @@
       startedAt = Date.now();
       pausedAt = 0;
       pausedDuration = 0;
+      captionSegments = [];
+      currentSegmentStartMs = 0;
 
       updateTimer();
       timerInterval = window.setInterval(updateTimer, 300);
@@ -839,6 +858,16 @@
     resultDurationVal.textContent = formatTime(durationMs);
     resultSizeVal.textContent = formatBytes(blob.size);
     resultFormatVal.textContent = formatLabel(chosenFormat, mimeType);
+
+    if (transcriptTextarea && transcriptCountLabel) {
+      if (captionSegments.length > 0) {
+        transcriptCountLabel.textContent = `${captionSegments.length} bloco(s) sincronizado(s)`;
+        transcriptTextarea.value = captionSegments.map((seg) => seg.text).join('\n');
+      } else {
+        transcriptCountLabel.textContent = '0 blocos capturados (editável)';
+        transcriptTextarea.value = '';
+      }
+    }
 
     // Enable dock download button
     downloadButton.disabled = false;
@@ -1160,6 +1189,34 @@
         }
       }
 
+      // 4. Draw Live Spoken Subtitles / Captions (v2.0) onto recorded video
+      if (isCaptionsActive && activeCaptionLine && performance.now() - activeCaptionUpdatedAt < 5000) {
+        compositeCtx.save();
+        const fontSize = Math.max(18, Math.round(h * 0.028));
+        compositeCtx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        compositeCtx.textAlign = 'center';
+        compositeCtx.textBaseline = 'middle';
+        const displayStr = activeCaptionLine.length > 95 ? '...' + activeCaptionLine.slice(-92) : activeCaptionLine;
+        const textWidth = compositeCtx.measureText(displayStr).width;
+        const padH = Math.round(fontSize * 0.8);
+        const padV = Math.round(fontSize * 0.45);
+        const boxW = Math.min(w * 0.88, textWidth + padH * 2);
+        const boxH = fontSize + padV * 2;
+        const boxX = (w - boxW) / 2;
+        const boxY = h - boxH - Math.round(h * 0.055);
+
+        drawRoundedRect(compositeCtx, boxX, boxY, boxW, boxH, Math.round(fontSize * 0.4));
+        compositeCtx.fillStyle = 'rgba(12, 13, 20, 0.82)';
+        compositeCtx.fill();
+        compositeCtx.lineWidth = Math.max(1, Math.round(w * 0.001));
+        compositeCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        compositeCtx.stroke();
+
+        compositeCtx.fillStyle = '#ffffff';
+        compositeCtx.fillText(displayStr, w / 2, boxY + boxH / 2, boxW - padH);
+        compositeCtx.restore();
+      }
+
       compositeAnimId = requestAnimationFrame(renderComposite);
     }
 
@@ -1475,6 +1532,198 @@
   });
   if (annoUndoBtn) annoUndoBtn.addEventListener('click', undoLastAnnotation);
   if (annoClearBtn) annoClearBtn.addEventListener('click', clearAllAnnotations);
+
+  // --- v2.0 Live Captions (SpeechRecognition) & Local .SRT Generator ---
+  function getElapsedRecordingMs() {
+    if (!startedAt) return 0;
+    const currentPause = pausedAt ? Date.now() - pausedAt : 0;
+    return Math.max(0, Date.now() - startedAt - pausedDuration - currentPause);
+  }
+
+  function formatSrtTimestamp(ms) {
+    const clamped = Math.max(0, Math.round(ms));
+    const hours = String(Math.floor(clamped / 3_600_000)).padStart(2, '0');
+    const minutes = String(Math.floor((clamped % 3_600_000) / 60_000)).padStart(2, '0');
+    const seconds = String(Math.floor((clamped % 60_000) / 1000)).padStart(2, '0');
+    const millis = String(clamped % 1000).padStart(3, '0');
+    return `${hours}:${minutes}:${seconds},${millis}`;
+  }
+
+  function updateCaptionsUiState() {
+    canvasCaptionsBtn?.classList.toggle('active', isCaptionsActive);
+    toggleCaptionsSourceBtn?.classList.toggle('active', isCaptionsActive);
+    toggleCaptionsSourceBtn?.classList.toggle('muted', !isCaptionsActive);
+    if (liveCaptionsOverlay) {
+      liveCaptionsOverlay.hidden = !isCaptionsActive;
+    }
+    if (sourceCaptionsStatus) {
+      sourceCaptionsStatus.textContent = isCaptionsActive ? 'Ao Vivo (.SRT)' : 'Desativada';
+      sourceCaptionsStatus.style.color = isCaptionsActive ? '#38d39f' : '';
+    }
+  }
+
+  function toggleLiveCaptions(forceState) {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const nextState = forceState !== undefined ? forceState : !isCaptionsActive;
+
+    if (!nextState) {
+      isCaptionsActive = false;
+      activeCaptionLine = '';
+      if (speechRecognition) {
+        try { speechRecognition.stop(); } catch {}
+        speechRecognition = null;
+      }
+      updateCaptionsUiState();
+      showToast('Legendas ao vivo desativadas.', 2200);
+      return;
+    }
+
+    if (!SpeechRec) {
+      showToast('⚠️ Reconhecimento de fala nativo não suportado neste navegador (use Chrome ou Edge). Você ainda pode digitar e exportar .SRT ao final!', 4500);
+      return;
+    }
+
+    try {
+      speechRecognition = new SpeechRec();
+      speechRecognition.lang = 'pt-BR';
+      speechRecognition.continuous = true;
+      speechRecognition.interimResults = true;
+
+      speechRecognition.onresult = (event) => {
+        let interim = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const txt = res[0]?.transcript?.trim() || '';
+          if (!txt) continue;
+
+          if (res.isFinal) {
+            finalTranscript += (finalTranscript ? ' ' : '') + txt;
+            const nowMs = getElapsedRecordingMs();
+            const startMs = currentSegmentStartMs > 0 ? currentSegmentStartMs : Math.max(0, nowMs - 2500);
+            const endMs = Math.max(startMs + 1200, nowMs);
+            captionSegments.push({
+              startMs,
+              endMs,
+              text: txt,
+            });
+            currentSegmentStartMs = 0;
+          } else {
+            if (currentSegmentStartMs === 0) {
+              currentSegmentStartMs = getElapsedRecordingMs();
+            }
+            interim += (interim ? ' ' : '') + txt;
+          }
+        }
+
+        const display = interim || finalTranscript;
+        if (display) {
+          activeCaptionLine = display;
+          activeCaptionUpdatedAt = performance.now();
+          if (liveCaptionText) {
+            liveCaptionText.textContent = display;
+          }
+        }
+      };
+
+      speechRecognition.onerror = (ev) => {
+        if (ev.error === 'not-allowed') {
+          isCaptionsActive = false;
+          updateCaptionsUiState();
+          showToast('Permissão de microfone negada para legendas.');
+        }
+      };
+
+      speechRecognition.onend = () => {
+        if (isCaptionsActive && speechRecognition) {
+          try { speechRecognition.start(); } catch {}
+        }
+      };
+
+      speechRecognition.start();
+      isCaptionsActive = true;
+      if (liveCaptionText) {
+        liveCaptionText.textContent = '🎙️ Legendas ativadas (fale no microfone)...';
+      }
+      updateCaptionsUiState();
+      showToast('Legendas automáticas (.SRT) ativadas! Sua fala será exibida no vídeo e salva para download.', 3800);
+    } catch (err) {
+      console.warn('Erro ao iniciar SpeechRecognition:', err);
+      showToast('Não foi possível iniciar as legendas automáticas.');
+    }
+  }
+
+  function buildSrtContent() {
+    const rawText = transcriptTextarea ? transcriptTextarea.value.trim() : '';
+    const manualLines = rawText
+      ? rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+      : [];
+
+    if (captionSegments.length > 0 && manualLines.length === captionSegments.length) {
+      return captionSegments
+        .map((seg, idx) => {
+          const lineText = manualLines[idx] || seg.text;
+          return `${idx + 1}\n${formatSrtTimestamp(seg.startMs)} --> ${formatSrtTimestamp(seg.endMs)}\n${lineText}\n`;
+        })
+        .join('\n');
+    }
+
+    if (manualLines.length > 0) {
+      const totalMs = Math.max(3000, Math.round(lastRecordingDurationSec * 1000));
+      const sliceMs = Math.max(1500, Math.floor(totalMs / manualLines.length));
+      return manualLines
+        .map((line, idx) => {
+          const sMs = idx * sliceMs;
+          const eMs = Math.min(totalMs, (idx + 1) * sliceMs - 100);
+          return `${idx + 1}\n${formatSrtTimestamp(sMs)} --> ${formatSrtTimestamp(Math.max(sMs + 800, eMs))}\n${line}\n`;
+        })
+        .join('\n');
+    }
+
+    return '';
+  }
+
+  if (canvasCaptionsBtn) {
+    canvasCaptionsBtn.addEventListener('click', () => toggleLiveCaptions());
+  }
+  if (toggleCaptionsSourceBtn) {
+    toggleCaptionsSourceBtn.addEventListener('click', () => toggleLiveCaptions());
+  }
+
+  if (copyTranscriptBtn) {
+    copyTranscriptBtn.addEventListener('click', async () => {
+      const text = transcriptTextarea?.value?.trim() || '';
+      if (!text) {
+        showToast('Nenhum texto de transcrição para copiar.', 2200);
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Transcrição copiada para a área de transferência!', 2500);
+      } catch {
+        showToast('Não foi possível copiar automaticamente.');
+      }
+    });
+  }
+
+  if (downloadSrtBtn) {
+    downloadSrtBtn.addEventListener('click', () => {
+      const srt = buildSrtContent();
+      if (!srt) {
+        showToast('Nenhuma legenda disponível. Digite ou fale com Legendas (CC) ativadas!', 3200);
+        return;
+      }
+      const blob = new Blob([srt], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `captura-legendas-${Date.now()}.srt`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      showToast('Arquivo de legendas (.srt) baixado com sucesso!', 2800);
+    });
+  }
 
   // Click Ripple on Preview Area
   if (previewContainer) {
@@ -2323,6 +2572,11 @@
     if (e.altKey && (e.code === 'KeyD' || e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       toggleAnnotationToolbar();
+    }
+
+    if (e.altKey && (e.code === 'KeyC' || e.key === 'c' || e.key === 'C')) {
+      e.preventDefault();
+      toggleLiveCaptions();
     }
 
     if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z')) {

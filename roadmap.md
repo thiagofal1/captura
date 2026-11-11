@@ -93,8 +93,8 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
   - Caneta livre, setas direcionais e caixas de destaque desenháveis na tela antes ou durante a gravação (gravadas diretamente no vídeo final).
 - [x] **Desfoque de Áreas Sensíveis (Blur Mask):**
   - Seleção de caixas de desfoque sobre senhas, tokens ou dados pessoais em tempo real (`backdrop-filter` + filtro de desfoque no canvas gravado).
-- [ ] **Legendas e Transcrição Local com Whisper (WebGPU):**
-  - Geração de legendas `.srt` e transcrição em texto da narração sem envio de dados para servidores externos.
+- [x] **Legendas Automáticas e Transcrição Local (`.srt` & CC ao Vivo):**
+  - Reconhecimento de fala local no navegador com legendas queimadas em tempo real no vídeo gravado, área de edição de transcrição pós-gravação e download direto de arquivo SubRip (`.srt`) sem envio para servidores externos.
 
 ---
 
@@ -122,7 +122,7 @@ Versão inicial estável, 100% no navegador, sem dependências externas.
 | Landing Page (`/`) & Rota `/studio` | **v2.0** | Médio | Muito Alto | 🟢 Concluído |
 | Anotações na Tela (Caneta, Setas, Caixas) | **v2.0** | Alto | Alto | 🟢 Concluído |
 | Máscara de Desfoque (Blur de Privacidade) | **v2.0** | Médio | Muito Alto | 🟢 Concluído |
-| Transcrição Whisper Local | **v2.0** | Alto | Muito Alto | 🔮 Futuro |
+| Legendas Automáticas & Exportador `.SRT` | **v2.0** | Alto | Muito Alto | 🟢 Concluído |
 
 ---
 

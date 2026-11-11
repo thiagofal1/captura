@@ -2036,4 +2036,64 @@ body.obs-theme.light-mode .annotation-toolbar {
   transform: scale(1.15);
 }
 
+/* ==========================================================================
+   v2.0 — Live Captions Overlay & SRT Transcript Panel
+   ========================================================================== */
+.live-captions-overlay {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 82%;
+  z-index: 22;
+  pointer-events: none;
+  text-align: center;
+}
+
+.live-caption-pill {
+  display: inline-block;
+  background: rgba(12, 13, 20, 0.84);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.transcript-bar-box {
+  margin-top: 10px;
+}
+
+.transcript-textarea {
+  width: 100%;
+  background: var(--obs-bg);
+  color: var(--obs-text-primary);
+  border: 1px solid var(--obs-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: var(--font-family);
+  font-size: 11.5px;
+  line-height: 1.45;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.transcript-textarea:focus {
+  outline: none;
+  border-color: var(--obs-border-focus);
+}
+
+.transcript-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
 
