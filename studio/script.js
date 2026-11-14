@@ -82,15 +82,6 @@
   const blurZonesContainer = document.querySelector('#blurZonesContainer');
   const annoUndoBtn = document.querySelector('#annoUndoBtn');
   const annoClearBtn = document.querySelector('#annoClearBtn');
-  const canvasCaptionsBtn = document.querySelector('#canvasCaptionsBtn');
-  const toggleCaptionsSourceBtn = document.querySelector('#toggleCaptionsSourceBtn');
-  const sourceCaptionsStatus = document.querySelector('#sourceCaptionsStatus');
-  const liveCaptionsOverlay = document.querySelector('#liveCaptionsOverlay');
-  const liveCaptionText = document.querySelector('#liveCaptionText');
-  const transcriptCountLabel = document.querySelector('#transcriptCountLabel');
-  const transcriptTextarea = document.querySelector('#transcriptTextarea');
-  const copyTranscriptBtn = document.querySelector('#copyTranscriptBtn');
-  const downloadSrtBtn = document.querySelector('#downloadSrtBtn');
   const sourceSettingsBtn = document.querySelector('#sourceSettingsBtn');
 
   // Facecam PiP Elements
@@ -242,14 +233,6 @@
   let blurRegions = []; // [{ id, x, y, w, h }] normalized 0..1
   let isDrawingAnno = false;
   let draftAnno = null;
-
-  // v2.0 Live Captions & Local .SRT Transcript State
-  let isCaptionsActive = false;
-  let speechRecognition = null;
-  let activeCaptionLine = '';
-  let activeCaptionUpdatedAt = 0;
-  let captionSegments = []; // [{ startMs, endMs, text }]
-  let currentSegmentStartMs = 0;
 
   // --- Toast Notification Helper ---
   function showToast(message, duration = 4500) {
@@ -607,12 +590,6 @@
       startedAt = Date.now();
       pausedAt = 0;
       pausedDuration = 0;
-      captionSegments = [];
-      currentSegmentStartMs = 0;
-
-      if (isCaptionsActive && !isUsingWhisper) {
-        startWebSpeechEngine();
-      }
 
       updateTimer();
       timerInterval = window.setInterval(updateTimer, 300);
@@ -862,16 +839,6 @@
     resultDurationVal.textContent = formatTime(durationMs);
     resultSizeVal.textContent = formatBytes(blob.size);
     resultFormatVal.textContent = formatLabel(chosenFormat, mimeType);
-
-    if (transcriptTextarea && transcriptCountLabel) {
-      if (captionSegments.length > 0) {
-        transcriptCountLabel.textContent = `${captionSegments.length} bloco(s) sincronizado(s)`;
-        transcriptTextarea.value = captionSegments.map((seg) => seg.text).join('\n');
-      } else {
-        transcriptCountLabel.textContent = '0 blocos capturados (editável)';
-        transcriptTextarea.value = '';
-      }
-    }
 
     // Enable dock download button
     downloadButton.disabled = false;
@@ -1191,34 +1158,6 @@
           compositeCtx.stroke();
           compositeCtx.restore();
         }
-      }
-
-      // 4. Draw Live Spoken Subtitles / Captions (v2.0) onto recorded video
-      if (isCaptionsActive && activeCaptionLine && performance.now() - activeCaptionUpdatedAt < 5000) {
-        compositeCtx.save();
-        const fontSize = Math.max(18, Math.round(h * 0.028));
-        compositeCtx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-        compositeCtx.textAlign = 'center';
-        compositeCtx.textBaseline = 'middle';
-        const displayStr = activeCaptionLine.length > 95 ? '...' + activeCaptionLine.slice(-92) : activeCaptionLine;
-        const textWidth = compositeCtx.measureText(displayStr).width;
-        const padH = Math.round(fontSize * 0.8);
-        const padV = Math.round(fontSize * 0.45);
-        const boxW = Math.min(w * 0.88, textWidth + padH * 2);
-        const boxH = fontSize + padV * 2;
-        const boxX = (w - boxW) / 2;
-        const boxY = h - boxH - Math.round(h * 0.055);
-
-        drawRoundedRect(compositeCtx, boxX, boxY, boxW, boxH, Math.round(fontSize * 0.4));
-        compositeCtx.fillStyle = 'rgba(12, 13, 20, 0.82)';
-        compositeCtx.fill();
-        compositeCtx.lineWidth = Math.max(1, Math.round(w * 0.001));
-        compositeCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        compositeCtx.stroke();
-
-        compositeCtx.fillStyle = '#ffffff';
-        compositeCtx.fillText(displayStr, w / 2, boxY + boxH / 2, boxW - padH);
-        compositeCtx.restore();
       }
 
       compositeAnimId = requestAnimationFrame(renderComposite);
